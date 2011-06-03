@@ -7,14 +7,14 @@
 -define(q, quoted).
 
 space_char_test_() ->
-    [?_assertEqual(" ", ?q:to_list("%20")),
-     ?_assertEqual(" ", ?q:to_list(<<"%20">>)),
-     ?_assertEqual(<<" ">>, ?q:from_url("%20")),
-     ?_assertEqual(<<" ">>, ?q:from_url(<<"%20">>)),
-     ?_assertEqual("%20", ?q:to_url(" ")),
-     ?_assertEqual("%20", ?q:to_url(<<" ">>)),
-     ?_assertEqual(<<"%20">>, ?q:to_url(" ")),
-     ?_assertEqual(<<"%20">>, ?q:to_url(" "))].
+    [?_assertEqual(" ", ?q:to_list("+")),
+     ?_assertEqual(" ", ?q:to_list(<<"+">>)),
+     ?_assertEqual(<<" ">>, ?q:from_url("+")),
+     ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>)),
+     ?_assertEqual("+", ?q:to_url(" ")),
+     ?_assertEqual("+", ?q:to_url(<<" ">>)),
+     ?_assertEqual(<<"+">>, ?q:to_url(" ")),
+     ?_assertEqual(<<"+">>, ?q:to_url(" "))].
 
 -ifdef(PROPER).
 
