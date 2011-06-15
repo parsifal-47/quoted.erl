@@ -11,6 +11,27 @@ static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
+static int load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info);
+static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info);
+static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info);
+static void unload(ErlNifEnv* env, void* priv);
+
+static int load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
+    return 0;
+}
+
+static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
+    return 0;
+}
+
+static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info) {
+    return 0;
+}
+
+static void unload(ErlNifEnv* env, void* priv) {
+    return;
+}
+
 ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     return enif_make_atom(env, "true");
 }
@@ -188,4 +209,4 @@ static ErlNifFunc nif_funcs[] = {
     {"to_url", 1, quote_iolist}
 };
 
-ERL_NIF_INIT(quoted, nif_funcs, NULL, NULL, NULL, NULL)
+ERL_NIF_INIT(quoted, nif_funcs, load, reload, upgrade, unload)
