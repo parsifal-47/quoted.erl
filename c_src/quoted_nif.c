@@ -79,9 +79,16 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    // Allocate a buffer of the same size as the input. This ensures
-    // that we only need to realloc once to shrink the size of the buffer
-    // if the buffer if the input contains quoted characters.
+    /* Allocate an output buffer of the same size as the input.
+     * This ensures that we only need to realloc once to shrink
+     * the size of the buffer if the input buffer contains quoted
+     * characters.
+     *
+     * XXX: A binary returned from enif_alloc_binary is not released when the
+     *      NIF call returns, as binaries returned from enif_inspect..binary are.
+     *      If the enif_alloc_binary call succeeds we _MUST_ release it or
+     *      transfer ownership to an ERL_NIF_TERM before returning.
+     */
     if(!enif_alloc_binary(input.size, &output)) {
         return enif_make_badarg(env);
     }
