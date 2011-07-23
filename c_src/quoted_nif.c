@@ -201,11 +201,13 @@ inline bool is_hex(unsigned char c) {
 }
 
 inline bool is_safe(unsigned char c) {
-    return (c >= '0' && c <= 'z' && (c >= 'a' || 
-                                     c <= '9' || 
-                                     (c >= 'A' && c <= 'Z')))
-        || (c == '.') || (c == '-')
-        || (c == '~') || (c == '_'); 
+    return (c >= '0' && c <= '9')
+        || (c >= 'A' && c <= 'Z')
+        || (c >= 'a' && c <= 'z')
+        || (c == '.')
+        || (c == '~')
+        || (c == '-')
+        || (c == '_');
 }
 
 inline unsigned char unhex(unsigned char c) {
