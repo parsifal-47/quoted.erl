@@ -102,12 +102,12 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         c0 = input.data[i];
         if('%' == c0) {
             if(input.size < i + 2) {
-                return enif_make_badarg(env);
+                goto error_allocated;
             }
             c1 = input.data[i + 1];
             c2 = input.data[i + 2];
             if(!is_hex(c1) || !is_hex(c2)) {
-                return enif_make_badarg(env);
+                goto error_allocated;
             }
             c0 = (unhex(c1) << 4) | unhex(c2);
             i += 3;
@@ -125,15 +125,22 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
     if(output_bin) {
         if(!enif_realloc_binary(&output, j)) {
-            return enif_make_badarg(env);
+            /* XXX: handle reallocation failure as invalid input */
+            goto error_allocated;
         }
-        return enif_make_binary(env, &output);
+        temp = enif_make_binary(env, &output);
+        enif_release_binary(&output);
+        return temp;
     }
     else {
         temp = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
         enif_release_binary(&output);
         return temp;
     }
+
+error_allocated:
+    enif_release_binary(&output);
+    return enif_make_badarg(env);
 }
 
 

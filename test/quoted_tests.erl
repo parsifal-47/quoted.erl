@@ -62,6 +62,26 @@ insufficient_hex_test_() ->
      ?_assertError(badarg, ?q:from_url("%A")),
      ?_assertError(badarg, ?q:from_url(<<"%A">>))].
 
+%% Verify that any binaries allocated in the NIF when
+%% decoding invalid input are released by the NIF and
+%% freed by the erlang runtime system.
+memory_leak_test() ->
+    BinMemBefore = erlang:memory(binary),
+    {Pid, MRef} = erlang:spawn_monitor(fun() ->
+        %% Use a binary that is 1MB large and unquote that binary
+        %% 1024 times, this shoud result in a noticable 1GB leak
+        %% if a memory leak is occuring.
+        Input = binary:copy(<<"%AI">>, (1024*1024) div 2),
+        _ = [catch quoted:from_url(Input) || _ <- lists:seq(1, 1024)],
+        erlang:garbage_collect()
+    end),
+    receive {'DOWN', MRef, _, _, _} -> ok end,
+    BinMemAfter = erlang:memory(binary),
+    BinMemDiff = BinMemAfter / BinMemBefore,
+    %% TODO: less fuzzy assertion?
+    ?assert(BinMemDiff < 1.1).
+
+
 -ifdef(PROPER).
 
 bstring() ->
