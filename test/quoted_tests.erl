@@ -38,6 +38,20 @@ space_char_test_() ->
      ?_assertEqual("%20", ?q:to_url(" ")),
      ?_assertEqual(<<"%20">>, ?q:to_url(<<" ">>))].
 
+%% Verify that the decoder throws a badarg error if any of the
+%% two characters following a percent-character isn't a valid
+%% hex-character.
+invalid_hex_test_() ->
+    [%% Second character after % is invalid
+     ?_assertError(badarg, ?q:from_url("%Aj")),
+     ?_assertError(badarg, ?q:from_url(<<"%Aj">>)),
+     %% First character after % is invalid
+     ?_assertError(badarg, ?q:from_url("%jA")),
+     ?_assertError(badarg, ?q:from_url(<<"%jA">>)),
+     %% Both characters after % are invalid
+     ?_assertError(badarg, ?q:from_url("%ij")),
+     ?_assertError(badarg, ?q:from_url(<<"%ij">>))].
+
 -ifdef(PROPER).
 
 bstring() ->

@@ -99,7 +99,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             }
             c1 = input.data[i + 1];
             c2 = input.data[i + 2];
-            if(!is_hex(c1) && !is_hex(c2)) {
+            if(!is_hex(c1) || !is_hex(c2)) {
                 return enif_make_badarg(env);
             }
             c0 = (unhex(c1) << 4) | unhex(c2);
