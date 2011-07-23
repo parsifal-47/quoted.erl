@@ -73,7 +73,8 @@ from_url_(Bin) when is_binary(Bin) ->
 
 
 -spec unquote_list_to_list([byte()]) -> [byte()].
-unquote_list_to_list([$%,HH,HL|T]) when is_integer(HH), is_integer(HL) ->
+unquote_list_to_list([$%|HT]) ->
+    [HH,HL|T] = HT,
     H = unhex(HH),
     L = unhex(HL),
     C = tobyte(H, L),
@@ -90,7 +91,8 @@ unquote_bin_to_bin(Bin) when is_binary(Bin) ->
     unquote_bin_to_bin(Bin, <<>>).
 
 -spec unquote_bin_to_bin(binary(), binary()) -> binary().
-unquote_bin_to_bin(<<$%,HH,HL,T/binary>>, Acc) ->
+unquote_bin_to_bin(<<$%,HT/binary>>, Acc) ->
+    <<HH,HL,T/binary>> = HT,
     H = unhex(HH),
     L = unhex(HL),
     C = tobyte(H, L),
@@ -106,8 +108,7 @@ unquote_bin_to_bin(<<>>, Acc) ->
 quote_list_to_list([AC|T]) ->
     case is_url_safe(AC) of
         true ->
-            C = to_url_alias(AC),
-            [C|quote_list_to_list(T)];
+            [AC|quote_list_to_list(T)];
         false ->
             H = tohex(highbits(AC)),
             L = tohex(lowbits(AC)),
@@ -125,8 +126,7 @@ quote_bin_to_bin(Bin) when is_binary(Bin) ->
 quote_bin_to_bin(<<AC, T/binary>>, Acc) ->
     case is_url_safe(AC) of
         true ->
-            C = to_url_alias(AC),
-            quote_bin_to_bin(T, <<Acc/binary, C>>);
+            quote_bin_to_bin(T, <<Acc/binary, AC>>);
         false ->
             H = tohex(highbits(AC)),
             L = tohex(lowbits(AC)),
@@ -158,12 +158,12 @@ tohex(C) ->
         7  -> $7;
         8  -> $8;
         9  -> $9;
-        10 -> $A;
-        11 -> $B;
-        12 -> $C;
-        13 -> $A;
-        14 -> $E;
-        15 -> $F
+        10 -> $a;
+        11 -> $b;
+        12 -> $c;
+        13 -> $d;
+        14 -> $e;
+        15 -> $f
     end.
 
 -spec unhex(byte()) -> byte().
@@ -210,18 +210,10 @@ is_url_safe(C) ->
         $5 -> true; $6 -> true; $7 -> true; $8 -> true; $9 -> true;
         %% Exceptions
         $. -> true; $- -> true; $~ -> true; $_ -> true;
-        %% With aliases
-        $\ -> true;
         %% Unsafe
         _ -> false
     end.
 
--spec to_url_alias(byte()) -> byte().
-to_url_alias(C) ->
-    case C of
-        $\  -> $+;
-        _   -> C
-    end.
 
 -spec from_url_alias(byte()) -> byte().
 from_url_alias(C) ->

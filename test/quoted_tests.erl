@@ -134,7 +134,39 @@ bin_inv_prop() ->
         Unquoted == Input
     end).
 
+bin_oracle_decode_prop() ->
+    ?FORALL(Input, binstring(),
+        safe_from_url(native, Input) =:= safe_from_url(erlang, Input)).
+
+list_oracle_decode_prop() ->
+    ?FORALL(Input, bstring(),
+        safe_from_url(native, Input) =:= safe_from_url(erlang, Input)).
+
+bin_oracle_encode_prop() ->
+    ?FORALL(Input, binstring(),
+        ?q:to_url(Input) =:= ?q:to_url_(Input)).
+
+list_oracle_encode_prop() ->
+    ?FORALL(Input, bstring(),
+        ?q:to_url(Input) =:= ?q:to_url_(Input)).
+
+
 list_inv_test() -> ?assert(proper:quickcheck(list_inv_prop())).
 bin_inv_test() -> ?assert(proper:quickcheck(bin_inv_prop())).
+bin_oracle_decode_test() -> ?assert(proper:quickcheck(bin_oracle_decode_prop())).
+list_oracle_decode_test() -> ?assert(proper:quickcheck(list_oracle_decode_prop())).
+bin_oracle_encode_test() -> ?assert(proper:quickcheck(bin_oracle_encode_prop())).
+list_oracle_encode_test() -> ?assert(proper:quickcheck(list_oracle_encode_prop())).
+
+safe_from_url(Impl, String) ->
+    Result = case Impl of
+        erlang -> (catch ?q:from_url_(String));
+        native -> (catch ?q:from_url(String))
+    end,
+    case Result of
+        {'EXIT', _} -> error;
+        Other -> Other
+    end.
+
 
 -endif.
