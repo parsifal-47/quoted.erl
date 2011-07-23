@@ -164,9 +164,12 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     }
 
 
-    // Allocate a buffer that is three times larger than the input
-    // that we only need to realloc once to shrink the size of the buffer
-    // if the input contains no charactes that needs to be quoted.
+    /* Allocate an output buffer that is three times larger than the input
+     * buffer. We only need to realloc once to shrink the size of the buffer
+     * if the input contains no charactes that needs to be quoted.
+     *
+     * XXX: See comment in unquote_iolist.
+     */
     if(!enif_alloc_binary(input.size * 3, &output)) {
         return enif_make_badarg(env);
     }
