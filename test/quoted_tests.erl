@@ -52,6 +52,16 @@ invalid_hex_test_() ->
      ?_assertError(badarg, ?q:from_url("%ij")),
      ?_assertError(badarg, ?q:from_url(<<"%ij">>))].
 
+%% Verify that the decoder throws a badarg error if a percent
+%% character is not followed by at least two characters.
+insufficient_hex_test_() ->
+    [%% No characters after % is invalid
+     ?_assertError(badarg, ?q:from_url("%")),
+     ?_assertError(badarg, ?q:from_url(<<"%">>)),
+     %% One character after % is invalid
+     ?_assertError(badarg, ?q:from_url("%A")),
+     ?_assertError(badarg, ?q:from_url(<<"%A">>))].
+
 -ifdef(PROPER).
 
 bstring() ->
