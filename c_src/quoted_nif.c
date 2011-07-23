@@ -198,6 +198,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
     if(output_bin) {
         if(!enif_realloc_binary(&output, j)) {
+            enif_release_binary(&output);
             return enif_make_badarg(env);
         }
         return enif_make_binary(env, &output);
