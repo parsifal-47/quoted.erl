@@ -101,7 +101,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     while(i < input.size) {
         c0 = input.data[i];
         if('%' == c0) {
-            if(input.size < i + 2) {
+            if(input.size < i + 3) {
                 goto error_allocated;
             }
             c1 = input.data[i + 1];
@@ -128,9 +128,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             /* XXX: handle reallocation failure as invalid input */
             goto error_allocated;
         }
-        temp = enif_make_binary(env, &output);
-        enif_release_binary(&output);
-        return temp;
+        return enif_make_binary(env, &output);
     }
     else {
         temp = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);

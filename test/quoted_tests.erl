@@ -62,6 +62,14 @@ insufficient_hex_test_() ->
      ?_assertError(badarg, ?q:from_url("%A")),
      ?_assertError(badarg, ?q:from_url(<<"%A">>))].
 
+%% The ?_assertError(badarg, ?q:from_url(<<"%A">>)) assertion
+%% occasionally failed when running the test suite multiple times.
+insufficient_hex_determinstic_test() ->
+    Input = fun() -> list_to_binary("%A") end,
+    _ = [?assertError(badarg, ?q:from_url(Input())) || _ <- lists:seq(1, 10000)],
+    ok.
+
+
 %% Verify that any binaries allocated in the NIF when
 %% decoding invalid input are released by the NIF and
 %% freed by the erlang runtime system.
