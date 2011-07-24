@@ -107,6 +107,13 @@ encode_memory_leak_test() ->
     %% TODO: less fuzzy assertion?
     ?assert(BinMemDiff < 1.1).
 
+%% Verify that a safe prefix is copied to the output when hitting
+%% a character that needs to be decoded into the output buffer.
+decode_safe_prefix_test_() ->
+    [?_assertEqual(<<"a ">>, ?q:from_url(<<"a%20">>)),
+     ?_assertEqual(<<"a ">>, ?q:from_url(<<"a+">>)),
+     ?_assertEqual(<<"ab ">>, ?q:from_url(<<"ab%20">>)),
+     ?_assertEqual(<<"ab ">>, ?q:from_url(<<"ab+">>))].
 
 
 
