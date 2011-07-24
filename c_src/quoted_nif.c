@@ -16,6 +16,7 @@
 
 #include "erl_nif.h"
 #include "stdbool.h"
+#include "string.h"
 /* The corresponding erlang functions are implemented
    in the src/quoted.erl file. */
 
@@ -57,7 +58,12 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     ErlNifBinary output;
     ERL_NIF_TERM temp;
     bool output_bin;
-    
+    unsigned int i = 0; // Position in input
+    unsigned int j = 0; // Position in output
+    unsigned char c0 = 0; // Current character
+    unsigned char c1 = 0; // Current character
+    unsigned char c2 = 0; // Current character
+
 
     /* Determine type of input.
      * The input format also determines the output format. The caller
@@ -79,6 +85,21 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
+
+    /* Scan through the input binary for any occurances of '+' or '%'.
+     */
+    while(i < input.size) {
+        c0 = input.data[i];
+        if(c0 == '%') { break; }
+        if(c0 == '+') { break; }
+        i++;
+    }
+
+    /* Nothing to decode. Return input term as output term */
+    if(i == input.size) {
+        return argv[0];
+    }
+
     /* Allocate an output buffer of the same size as the input.
      * This ensures that we only need to realloc once to shrink
      * the size of the buffer if the input buffer contains quoted
@@ -92,12 +113,9 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     if(!enif_alloc_binary(input.size, &output)) {
         return enif_make_badarg(env);
     }
+    memcpy(output.data, input.data, i);
+    j = i;
 
-    unsigned int i = 0; // Position in input
-    unsigned int j = 0; // Position in output
-    unsigned char c0 = 0; // Current character
-    unsigned char c1 = 0; // Current character
-    unsigned char c2 = 0; // Current character
     while(i < input.size) {
         c0 = input.data[i];
         if('%' == c0) {
