@@ -23,6 +23,7 @@
 typedef struct {
     bool is_hex_table[255];
     bool is_safe_table[255];
+    unsigned char unhex_table[255];
 } quoted_priv_data;
 
 static bool is_hex(unsigned char c);
@@ -30,6 +31,7 @@ static bool is_hex_tab(unsigned char c, quoted_priv_data* data);
 static bool is_safe(unsigned char c);
 static bool is_safe_tab(unsigned char c, quoted_priv_data* data);
 static unsigned char unhex(unsigned char c);
+static unsigned char unhex_tab(unsigned char c, quoted_priv_data* data);
 static unsigned char tohexlower(unsigned char c);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -58,7 +60,12 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     priv->is_safe_table['~'] = true;
     priv->is_safe_table['-'] = true;
     priv->is_safe_table['_'] = true;
-   
+
+    memset(priv->unhex_table, 0, 255);
+    for(i = '0'; i <= '9'; i++) { priv->unhex_table[i] = i - '0'; }
+    for(i = 'A'; i <= 'F'; i++) { priv->unhex_table[i] = i - 'A' + 10; }
+    for(i = 'a'; i <= 'f'; i++) { priv->unhex_table[i] = i - 'a' + 10; }
+  
     *priv_data = priv;
     return 0;
 }
@@ -154,7 +161,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             if(!is_hex_tab(c1, priv) || !is_hex_tab(c2, priv)) {
                 goto error_allocated;
             }
-            c0 = (unhex(c1) << 4) | unhex(c2);
+            c0 = (unhex_tab(c1, priv) << 4) | unhex_tab(c2, priv);
             i += 3;
         }
         else {
@@ -289,6 +296,12 @@ inline unsigned char unhex(unsigned char c) {
     if(c >= '0' && c <= '9') { return c - '0'; }
     if(c >= 'A' && c <= 'F') { return c - 'A' + 10; }
     if(c >= 'a' && c <= 'f') { return c - 'a' + 10; }
+}
+
+inline unsigned char
+unhex_tab(unsigned char c, quoted_priv_data* data)
+{
+    return data->unhex_table[c];
 }
 
 unsigned char tohexlower(unsigned char c) {
