@@ -20,8 +20,15 @@
 /* The corresponding erlang functions are implemented
    in the src/quoted.erl file. */
 
+typedef struct {
+    bool is_hex_table[255];
+    bool is_safe_table[255];
+} quoted_priv_data;
+
 static bool is_hex(unsigned char c);
+static bool is_hex_tab(unsigned char c, quoted_priv_data* data);
 static bool is_safe(unsigned char c);
+static bool is_safe_tab(unsigned char c, quoted_priv_data* data);
 static unsigned char unhex(unsigned char c);
 static unsigned char tohexlower(unsigned char c);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -33,7 +40,26 @@ static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info);
 static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info);
 static void unload(ErlNifEnv* env, void* priv);
 
-static int load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
+static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
+{
+    quoted_priv_data* priv = enif_alloc(sizeof(quoted_priv_data));
+    int i = 0;
+    
+    memset(priv->is_hex_table, false, 255);
+    for(i = '0'; i <= '9'; i++) { priv->is_hex_table[i] = true; }
+    for(i = 'a'; i <= 'f'; i++) { priv->is_hex_table[i] = true; }
+    for(i = 'A'; i <= 'F'; i++) { priv->is_hex_table[i] = true; }
+
+    memset(priv->is_safe_table, false, 255);
+    for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = true; }
+    for(i = 'a'; i <= 'z'; i++) { priv->is_safe_table[i] = true; }
+    for(i = 'A'; i <= 'Z'; i++) { priv->is_safe_table[i] = true; }
+    priv->is_safe_table['.'] = true;
+    priv->is_safe_table['~'] = true;
+    priv->is_safe_table['-'] = true;
+    priv->is_safe_table['_'] = true;
+   
+    *priv_data = priv;
     return 0;
 }
 
@@ -53,7 +79,9 @@ ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     return enif_make_atom(env, "true");
 }
 
-ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
     ErlNifBinary input;
     ErlNifBinary output;
     ERL_NIF_TERM temp;
@@ -63,7 +91,6 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned char c0 = 0; // Current character
     unsigned char c1 = 0; // Current character
     unsigned char c2 = 0; // Current character
-
 
     /* Determine type of input.
      * The input format also determines the output format. The caller
@@ -124,7 +151,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             }
             c1 = input.data[i + 1];
             c2 = input.data[i + 2];
-            if(!is_hex(c1) || !is_hex(c2)) {
+            if(!is_hex_tab(c1, priv) || !is_hex_tab(c2, priv)) {
                 goto error_allocated;
             }
             c0 = (unhex(c1) << 4) | unhex(c2);
@@ -160,7 +187,9 @@ error_allocated:
 }
 
 
-ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
     ErlNifBinary input;
     ErlNifBinary output;
     ERL_NIF_TERM temp;
@@ -202,7 +231,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     unsigned char c = 0; // Current character
     while(i < input.size) {
         c = input.data[i];
-        if(is_safe(c)) {
+        if(is_safe_tab(c, priv)) {
             output.data[j++] = c;
             i++;
         }
@@ -234,6 +263,12 @@ inline bool is_hex(unsigned char c) {
         || (c >= 'a' && c <= 'f');
 }
 
+inline bool
+is_hex_tab(unsigned char c, quoted_priv_data* data)
+{
+    return data->is_hex_table[c];
+}
+
 inline bool is_safe(unsigned char c) {
     return (c >= '0' && c <= '9')
         || (c >= 'A' && c <= 'Z')
@@ -242,6 +277,12 @@ inline bool is_safe(unsigned char c) {
         || (c == '~')
         || (c == '-')
         || (c == '_');
+}
+
+inline bool
+is_safe_tab(unsigned char c, quoted_priv_data* data)
+{
+    return data->is_safe_table[c];
 }
 
 inline unsigned char unhex(unsigned char c) {
