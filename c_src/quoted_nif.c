@@ -49,10 +49,13 @@ static ERL_NIF_TERM true_ATOM;
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
     quoted_priv_data* priv = enif_alloc(sizeof(quoted_priv_data));
-    int i = 0;
+    if(priv == NULL) {
+        return EXIT_FAILURE;
+    }
 
     enif_make_existing_atom(env, "true", &true_ATOM,  ERL_NIF_LATIN1);
 
+    int i = 0;
     memset(priv->is_safe_table, false, 256);
     for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = true; }
     for(i = 'a'; i <= 'z'; i++) { priv->is_safe_table[i] = true; }
@@ -72,15 +75,15 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     for(i = 10; i <= 16; i++) { priv->tohex_table[i] = 'a' + (i - 10); }
 
     *priv_data = priv;
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info) {
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static void unload(ErlNifEnv* env, void* priv) {
