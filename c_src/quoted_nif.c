@@ -239,7 +239,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         else {
             output.data[j++] = '%';
             output.data[j++] = tohex_tab(c >> 4, priv);
-            output.data[j++] = tohex_tab(c & 15, priv);
+            output.data[j++] = tohex_tab(c & 0x0F, priv);
             i++;
         }
     }
