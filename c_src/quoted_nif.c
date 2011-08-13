@@ -182,10 +182,11 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         enif_release_binary(&output);
         return temp;
     }
-
+    else {
 error_allocated:
-    enif_release_binary(&output);
-    return enif_make_badarg(env);
+        enif_release_binary(&output);
+        return enif_make_badarg(env);
+    }
 }
 
 
