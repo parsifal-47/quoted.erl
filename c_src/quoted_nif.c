@@ -78,6 +78,7 @@ static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM lo
 }
 
 static void unload(ErlNifEnv* env, void* priv) {
+    enif_free(priv);
     return;
 }
 
@@ -97,8 +98,6 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned char c0 = 0; // Current character
     unsigned char c1 = 0; // Current character
     unsigned char c2 = 0; // Current character
-    unsigned char uc1 = 0;
-    unsigned char uc2 = 0;
 
     /* Determine type of input.
      * The input format also determines the output format. The caller
@@ -119,7 +118,6 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     else {
         return enif_make_badarg(env);
     }
-
 
     /* Scan through the input binary for any occurances of '+' or '%'.
      */
