@@ -21,9 +21,10 @@
    in the src/quoted.erl file. */
 
 typedef struct {
-    bool is_hex_table[255];
-    bool is_safe_table[255];
-    unsigned char unhex_table[255];
+    bool is_hex_table[256];
+    bool is_safe_table[256];
+    unsigned char unhex_table[256];
+    unsigned char tohex_table[256];
 } quoted_priv_data;
 
 static bool is_hex(unsigned char c);
@@ -32,7 +33,8 @@ static bool is_safe(unsigned char c);
 static bool is_safe_tab(unsigned char c, quoted_priv_data* data);
 static unsigned char unhex(unsigned char c);
 static unsigned char unhex_tab(unsigned char c, quoted_priv_data* data);
-static unsigned char tohexlower(unsigned char c);
+static unsigned char tohex(unsigned char c);
+static unsigned char tohex_tab(unsigned char c, quoted_priv_data* data);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -47,12 +49,12 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     quoted_priv_data* priv = enif_alloc(sizeof(quoted_priv_data));
     int i = 0;
     
-    memset(priv->is_hex_table, false, 255);
+    memset(priv->is_hex_table, false, 256);
     for(i = '0'; i <= '9'; i++) { priv->is_hex_table[i] = true; }
     for(i = 'a'; i <= 'f'; i++) { priv->is_hex_table[i] = true; }
     for(i = 'A'; i <= 'F'; i++) { priv->is_hex_table[i] = true; }
 
-    memset(priv->is_safe_table, false, 255);
+    memset(priv->is_safe_table, false, 256);
     for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = true; }
     for(i = 'a'; i <= 'z'; i++) { priv->is_safe_table[i] = true; }
     for(i = 'A'; i <= 'Z'; i++) { priv->is_safe_table[i] = true; }
@@ -61,11 +63,15 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     priv->is_safe_table['-'] = true;
     priv->is_safe_table['_'] = true;
 
-    memset(priv->unhex_table, 0, 255);
+    memset(priv->unhex_table, 0xF0, 256);
     for(i = '0'; i <= '9'; i++) { priv->unhex_table[i] = i - '0'; }
     for(i = 'A'; i <= 'F'; i++) { priv->unhex_table[i] = i - 'A' + 10; }
     for(i = 'a'; i <= 'f'; i++) { priv->unhex_table[i] = i - 'a' + 10; }
-  
+
+    memset(priv->tohex_table, false, 256);
+    for(i = 0;  i <= 9;  i++) { priv->tohex_table[i] = '0' + i; }
+    for(i = 10; i <= 16; i++) { priv->tohex_table[i] = 'a' + (i - 10); }
+
     *priv_data = priv;
     return 0;
 }
@@ -98,6 +104,8 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned char c0 = 0; // Current character
     unsigned char c1 = 0; // Current character
     unsigned char c2 = 0; // Current character
+    unsigned char uc1 = 0;
+    unsigned char uc2 = 0;
 
     /* Determine type of input.
      * The input format also determines the output format. The caller
@@ -158,10 +166,12 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             }
             c1 = input.data[i + 1];
             c2 = input.data[i + 2];
-            if(!is_hex_tab(c1, priv) || !is_hex_tab(c2, priv)) {
+            c1 = unhex_tab(c1, priv);
+            c2 = unhex_tab(c2, priv);
+            if((c1 | c2) & 0xF0) {
                 goto error_allocated;
             }
-            c0 = (unhex_tab(c1, priv) << 4) | unhex_tab(c2, priv);
+            c0 = (c1 << 4) | c2;
             i += 3;
         }
         else {
@@ -244,8 +254,8 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         }
         else {
             output.data[j++] = '%';
-            output.data[j++] = tohexlower(c >> 4);
-            output.data[j++] = tohexlower(c & 15);
+            output.data[j++] = tohex_tab(c >> 4, priv);
+            output.data[j++] = tohex_tab(c & 15, priv);
             i++;
         }
     }
@@ -304,9 +314,15 @@ unhex_tab(unsigned char c, quoted_priv_data* data)
     return data->unhex_table[c];
 }
 
-unsigned char tohexlower(unsigned char c) {
+unsigned char tohex(unsigned char c) {
     if(c < 10) { return '0' + c; }
     if(c < 16) { return 'a' + (c - 10); }
+}
+
+inline unsigned char
+tohex_tab(unsigned char c, quoted_priv_data* data)
+{
+    return data->tohex_table[c];
 }
 
 static ErlNifFunc nif_funcs[] = {
