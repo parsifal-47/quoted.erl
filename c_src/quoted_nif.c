@@ -215,6 +215,17 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         goto out_return;
     }
 
+    while(i < input.size) {
+        c = input.data[i];
+        if(!is_safe_tab(c, priv)) { break; }
+        i++;
+    }
+
+    if(i == input.size) {
+        return_value = argv[0];
+        goto out_return;
+    }
+
     /* Allocate an output buffer that is three times larger than the input
      * buffer. We only need to realloc once to shrink the size of the buffer
      * if the input contains no charactes that needs to be quoted.
@@ -224,6 +235,8 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     if(!enif_alloc_binary(input.size * 3, &output)) {
         goto out_return;
     }
+    memcpy(output.data, input.data, i);
+    j = i;
 
     while(i < input.size) {
         c = input.data[i];
