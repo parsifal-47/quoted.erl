@@ -157,10 +157,8 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             if(input.size < i + 3) {
                 goto error_allocated;
             }
-            c1 = input.data[++i];
-            c2 = input.data[++i];
-            c1 = unhex_tab(c1, priv);
-            c2 = unhex_tab(c2, priv);
+            c1 = unhex_tab(input.data[++i], priv);
+            c2 = unhex_tab(input.data[++i], priv);
             if((c1 | c2) & 0xF0) {
                 goto error_allocated;
             }
