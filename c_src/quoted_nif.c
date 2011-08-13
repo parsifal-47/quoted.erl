@@ -175,9 +175,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     }
 
     if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
-        return_value = enif_make_binary(env, &output);
-        enif_release_binary(&output);
-        return return_value;
+        return enif_make_binary(env, &output);
     }
     else if(input_type == Q_LIST) {
         return_value = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
@@ -250,9 +248,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     }
 
     if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
-        return_value = enif_make_binary(env, &output);
-        enif_release_binary(&output);
-        return return_value;
+        return enif_make_binary(env, &output);
     }
     else if(input_type == Q_LIST) {
         return_value = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
