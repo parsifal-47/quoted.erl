@@ -28,13 +28,13 @@ typedef struct {
 } quoted_priv_data;
 
 static bool is_hex(unsigned char c);
-static bool is_hex_tab(unsigned char c, quoted_priv_data* data);
+static bool is_hex_tab(const unsigned char c, const quoted_priv_data* data);
 static bool is_safe(unsigned char c);
-static bool is_safe_tab(unsigned char c, quoted_priv_data* data);
+static bool is_safe_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char unhex(unsigned char c);
-static unsigned char unhex_tab(unsigned char c, quoted_priv_data* data);
+static unsigned char unhex_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char tohex(unsigned char c);
-static unsigned char tohex_tab(unsigned char c, quoted_priv_data* data);
+static unsigned char tohex_tab(const unsigned char c, const quoted_priv_data* data);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -281,7 +281,7 @@ inline bool is_hex(unsigned char c) {
 }
 
 inline bool
-is_hex_tab(unsigned char c, quoted_priv_data* data)
+is_hex_tab(const unsigned char c, const quoted_priv_data* data)
 {
     return data->is_hex_table[c];
 }
@@ -297,7 +297,7 @@ inline bool is_safe(unsigned char c) {
 }
 
 inline bool
-is_safe_tab(unsigned char c, quoted_priv_data* data)
+is_safe_tab(const unsigned char c, const quoted_priv_data* data)
 {
     return data->is_safe_table[c];
 }
@@ -309,7 +309,7 @@ inline unsigned char unhex(unsigned char c) {
 }
 
 inline unsigned char
-unhex_tab(unsigned char c, quoted_priv_data* data)
+unhex_tab(const unsigned char c, const quoted_priv_data* data)
 {
     return data->unhex_table[c];
 }
@@ -320,7 +320,7 @@ unsigned char tohex(unsigned char c) {
 }
 
 inline unsigned char
-tohex_tab(unsigned char c, quoted_priv_data* data)
+tohex_tab(const unsigned char c, const quoted_priv_data* data)
 {
     return data->tohex_table[c];
 }
