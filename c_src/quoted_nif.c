@@ -26,6 +26,12 @@ typedef struct {
     unsigned char tohex_table[256];
 } quoted_priv_data;
 
+typedef enum {
+    Q_INVALID,
+    Q_LIST,
+    Q_BINARY
+} quoted_input_t;
+
 static bool is_safe_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char unhex_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char tohex_tab(const unsigned char c, const quoted_priv_data* data);
@@ -92,7 +98,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     ErlNifBinary input;
     ErlNifBinary output;
     ERL_NIF_TERM temp;
-    bool output_bin;
+    quoted_input_t input_type = Q_INVALID;
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
     unsigned char c0 = 0; // Current character
@@ -103,19 +109,15 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      * The input format also determines the output format. The caller
      * expects the output to be of the same type as the input format.
      */
-    if(enif_is_list(env, argv[0])) {
-        output_bin = false;
-        if(!enif_inspect_iolist_as_binary(env, argv[0], &input)) {
-            return enif_make_badarg(env);
-        }
+    if(enif_is_list(env, argv[0])
+            && enif_inspect_iolist_as_binary(env, argv[0], &input)) {
+        input_type = Q_LIST;
     }
-    else if(enif_is_binary(env, argv[0])) {
-        output_bin = true;
-        if(!enif_inspect_binary(env, argv[0], &input)) {
-            return enif_make_badarg(env);
-        }
+    else if(enif_is_binary(env, argv[0])
+            && enif_inspect_binary(env, argv[0], &input)) {
+        input_type = Q_BINARY;
     }
-    else {
+    if(input_type == Q_INVALID) {
         return enif_make_badarg(env);
     }
 
@@ -176,14 +178,10 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         output.data[j++] = c0;
     }
 
-    if(output_bin) {
-        if(!enif_realloc_binary(&output, j)) {
-            /* XXX: handle reallocation failure as invalid input */
-            goto error_allocated;
-        }
+    if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
         return enif_make_binary(env, &output);
     }
-    else {
+    else if(input_type == Q_LIST) {
         temp = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
         enif_release_binary(&output);
         return temp;
