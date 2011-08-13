@@ -160,10 +160,10 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             }
             c1 = unhex_tab(input.data[++i], priv);
             c2 = unhex_tab(input.data[++i], priv);
+            c0 = (c1 << 4) | c2;
             if((c1 | c2) & 0xF0) {
                 goto out_allocated;
             }
-            c0 = (c1 << 4) | c2;
         }
         else if(c0 == '+') {
             // Spaces may be encoded as "%20" or "+". The first is standard,
@@ -195,7 +195,10 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     ErlNifBinary output;
     ERL_NIF_TERM temp;
     bool output_bin;
-    
+    unsigned int i = 0; // Position in input
+    unsigned int j = 0; // Position in output
+    unsigned char c = 0; // Current character
+
 
     /* Determine type of input.
      * See comment on output format in unquote_iolist(...)
@@ -227,9 +230,6 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    unsigned int i = 0; // Position in input
-    unsigned int j = 0; // Position in output
-    unsigned char c = 0; // Current character
     while(i < input.size) {
         c = input.data[i];
         if(is_safe_tab(c, priv)) {
