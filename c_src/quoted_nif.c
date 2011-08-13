@@ -154,7 +154,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
     while(i < input.size) {
         c0 = input.data[i];
-        if('%' == c0) {
+        if(c0 == '%') {
             if(input.size < i + 3) {
                 goto out_allocated;
             }
