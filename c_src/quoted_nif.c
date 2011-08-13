@@ -101,9 +101,9 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     quoted_input_t input_type = Q_INVALID;
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
-    unsigned char c0 = 0; // Current character
-    unsigned char c1 = 0; // Current character
-    unsigned char c2 = 0; // Current character
+    unsigned char c = 0; // Current character
+    unsigned char d = 0; // Current character
+    unsigned char e = 0; // Current character
 
     /* Determine type of input.
      * The input format also determines the output format. The caller
@@ -124,9 +124,9 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     /* Scan through the input binary for any occurances of '+' or '%'.
      */
     while(i < input.size) {
-        c0 = input.data[i];
-        if(c0 == '%') { break; }
-        if(c0 == '+') { break; }
+        c = input.data[i];
+        if(c == '%') { break; }
+        if(c == '+') { break; }
         i++;
     }
 
@@ -153,26 +153,26 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     j = i;
 
     while(i < input.size) {
-        c0 = input.data[i];
-        if(c0 == '%') {
+        c = input.data[i];
+        if(c == '%') {
             if(input.size < i + 3) {
                 goto out_allocated;
             }
-            c1 = unhex_tab(input.data[++i], priv);
-            c2 = unhex_tab(input.data[++i], priv);
-            c0 = (c1 << 4) | c2;
-            if((c1 | c2) & 0xF0) {
+            d = unhex_tab(input.data[++i], priv);
+            e = unhex_tab(input.data[++i], priv);
+            c = (d << 4) | e;
+            if((d | e) & 0xF0) {
                 goto out_allocated;
             }
         }
-        else if(c0 == '+') {
+        else if(c == '+') {
             // Spaces may be encoded as "%20" or "+". The first is standard,
             // but the second very popular. This library does " "<->"%20", 
             // but also " "<--"+" for compatibility with things like jQuery.
-            c0 = ' ';
+            c = ' ';
         }
         i++;
-        output.data[j++] = c0;
+        output.data[j++] = c;
     }
 
     if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
