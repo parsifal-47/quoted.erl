@@ -164,11 +164,11 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             }
             c0 = (c1 << 4) | c2;
         }
-        else {
+        else if(c0 == '+') {
             // Spaces may be encoded as "%20" or "+". The first is standard,
             // but the second very popular. This library does " "<->"%20", 
             // but also " "<--"+" for compatibility with things like jQuery.
-            if (c0=='+') {c0 = ' ';};
+            c0 = ' ';
         }
         i++;
         output.data[j++] = c0;
