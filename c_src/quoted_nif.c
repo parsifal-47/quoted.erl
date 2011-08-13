@@ -142,11 +142,6 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      * This ensures that we only need to realloc once to shrink
      * the size of the buffer if the input buffer contains quoted
      * characters.
-     *
-     * XXX: A binary returned from enif_alloc_binary is not released when the
-     *      NIF call returns, as binaries returned from enif_inspect..binary are.
-     *      If the enif_alloc_binary call succeeds we _MUST_ release it or
-     *      transfer ownership to an ERL_NIF_TERM before returning.
      */
     if(!enif_alloc_binary(input.size, &output)) {
         return enif_make_badarg(env);
@@ -234,8 +229,6 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     /* Allocate an output buffer that is three times larger than the input
      * buffer. We only need to realloc once to shrink the size of the buffer
      * if the input contains no charactes that needs to be quoted.
-     *
-     * XXX: See comment in unquote_iolist.
      */
     if(!enif_alloc_binary(input.size * 3, &output)) {
         return enif_make_badarg(env);
