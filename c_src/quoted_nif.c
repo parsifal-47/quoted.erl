@@ -21,13 +21,11 @@
    in the src/quoted.erl file. */
 
 typedef struct {
-    bool is_hex_table[256];
     bool is_safe_table[256];
     unsigned char unhex_table[256];
     unsigned char tohex_table[256];
 } quoted_priv_data;
 
-static bool is_hex_tab(const unsigned char c, const quoted_priv_data* data);
 static bool is_safe_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char unhex_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char tohex_tab(const unsigned char c, const quoted_priv_data* data);
@@ -44,11 +42,6 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
     quoted_priv_data* priv = enif_alloc(sizeof(quoted_priv_data));
     int i = 0;
-    
-    memset(priv->is_hex_table, false, 256);
-    for(i = '0'; i <= '9'; i++) { priv->is_hex_table[i] = true; }
-    for(i = 'a'; i <= 'f'; i++) { priv->is_hex_table[i] = true; }
-    for(i = 'A'; i <= 'F'; i++) { priv->is_hex_table[i] = true; }
 
     memset(priv->is_safe_table, false, 256);
     for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = true; }
@@ -268,12 +261,6 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         enif_release_binary(&output);
         return temp;
     }
-}
-
-inline bool
-is_hex_tab(const unsigned char c, const quoted_priv_data* data)
-{
-    return data->is_hex_table[c];
 }
 
 inline bool
