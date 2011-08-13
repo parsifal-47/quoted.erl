@@ -38,10 +38,14 @@ static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info);
 static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info);
 static void unload(ErlNifEnv* env, void* priv);
 
+static ERL_NIF_TERM true_ATOM;
+
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
     quoted_priv_data* priv = enif_alloc(sizeof(quoted_priv_data));
     int i = 0;
+
+    enif_make_existing_atom(env, "true", &true_ATOM,  ERL_NIF_LATIN1);
 
     memset(priv->is_safe_table, false, 256);
     for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = true; }
@@ -78,7 +82,7 @@ static void unload(ErlNifEnv* env, void* priv) {
 }
 
 ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    return enif_make_atom(env, "true");
+    return true_ATOM;
 }
 
 ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
