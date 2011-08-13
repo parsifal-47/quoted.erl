@@ -97,7 +97,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
     ErlNifBinary input;
     ErlNifBinary output;
-    ERL_NIF_TERM temp;
+    ERL_NIF_TERM return_value = enif_make_badarg(env);
     quoted_input_t input_type = Q_INVALID;
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
@@ -118,7 +118,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         input_type = Q_BINARY;
     }
     if(input_type == Q_INVALID) {
-        return enif_make_badarg(env);
+        goto out_return;
     }
 
     /* Scan through the input binary for any occurances of '+' or '%'.
@@ -132,7 +132,8 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
     /* Nothing to decode. Return input term as output term */
     if(i == input.size) {
-        return argv[0];
+        return_value = argv[0];
+        goto out_return;
     }
 
     /* Allocate an output buffer of the same size as the input.
@@ -146,7 +147,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      *      transfer ownership to an ERL_NIF_TERM before returning.
      */
     if(!enif_alloc_binary(input.size, &output)) {
-        return enif_make_badarg(env);
+        goto out_return;
     }
     memcpy(output.data, input.data, i);
     j = i;
@@ -155,12 +156,12 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         c0 = input.data[i];
         if('%' == c0) {
             if(input.size < i + 3) {
-                goto error_allocated;
+                goto out_allocated;
             }
             c1 = unhex_tab(input.data[++i], priv);
             c2 = unhex_tab(input.data[++i], priv);
             if((c1 | c2) & 0xF0) {
-                goto error_allocated;
+                goto out_allocated;
             }
             c0 = (c1 << 4) | c2;
         }
@@ -175,18 +176,15 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     }
 
     if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
-        return enif_make_binary(env, &output);
+        return_value = enif_make_binary(env, &output);
     }
     else if(input_type == Q_LIST) {
-        temp = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
-        enif_release_binary(&output);
-        return temp;
+        return_value = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
     }
-    else {
-error_allocated:
-        enif_release_binary(&output);
-        return enif_make_badarg(env);
-    }
+out_allocated:
+    enif_release_binary(&output);
+out_return:
+    return return_value;
 }
 
 
