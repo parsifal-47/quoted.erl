@@ -17,7 +17,8 @@
 -on_load(load_nif/0).
 
 %% exported functions
--export([to_url/1,
+-export([make/1,
+         to_url/1,
          from_url/1]).
 
 %% internal functions
@@ -26,7 +27,18 @@
 
 
 
--type data()    :: [byte()] | binary().
+-type data() :: [byte()] | binary().
+-type option()
+   :: {charcase, lower | upper}
+    | {strict, boolean()}
+    | {plus, boolean()}.
+
+-record(options, {
+    charcase :: lower | upper,
+    strict :: boolean(),
+    plus :: boolean()}).
+-opaque options() :: #options{}.
+-export_type([options/0]).
 
 load_nif() ->
     erlang:load_nif(nif_path(), 0).
@@ -47,6 +59,29 @@ nif_path() ->
 -spec is_native() -> boolean().
 is_native() -> false.
 
+
+%% @doc
+%% @end
+-spec make([option()]) -> options().
+make(OptionsList) ->
+    Default = defaults(),
+    Case = case lists:keyfind(charcase, 1, OptionsList) of
+        {charcase, ICase} -> ICase;
+        false -> Default#options.charcase
+    end,
+    Strict = case lists:keyfind(strict, 1, OptionsList) of
+        {strict, IStrict} -> IStrict;
+        false -> Default#options.strict
+    end,
+    Plus = case lists:keyfind(plus, 1, OptionsList) of
+        {plus, IPlus} -> IPlus;
+        false -> Default#options.plus
+    end,
+    #options{charcase=Case, strict=Strict, plus=Plus}.
+
+%% @private Return the default options.
+defaults() ->
+    #options{charcase=lower, strict=false, plus=false}.
 
 %% @doc
 %% @end
