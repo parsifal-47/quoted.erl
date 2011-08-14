@@ -19,7 +19,9 @@
 %% exported functions
 -export([make/1,
          to_url/1,
-         from_url/1]).
+         to_url/2,
+         from_url/1,
+         from_url/2]).
 
 %% internal functions
 -export([to_url_/1, from_url_/1]).
@@ -83,16 +85,29 @@ make(OptionsList) ->
 defaults() ->
     #options{charcase=lower, strict=false, plus=false}.
 
+
 %% @doc
 %% @end
 -spec to_url(data()) -> data().
 to_url(Data) ->
     to_url_(Data).
 
-to_url_(Str) when is_list(Str) ->
-    quote_list_to_list(Str);
-to_url_(Bin) when is_binary(Bin) ->
-    quote_bin_to_bin(Bin).
+
+to_url_(Data) ->
+    to_url_(Data, defaults()).
+
+
+%% @doc
+%% @end
+-spec to_url(data(), options()) -> data().
+to_url(Data, Options) ->
+    to_url_(Data, Options).
+
+
+to_url_(Str, Options) when is_list(Str) ->
+    quote_list_to_list(Str, Options);
+to_url_(Bin, Options) when is_binary(Bin) ->
+    quote_bin_to_bin(Bin, Options).
 
 
 %% @doc
@@ -101,73 +116,85 @@ to_url_(Bin) when is_binary(Bin) ->
 from_url(Data) ->
     from_url_(Data).
 
-from_url_(Str) when is_list(Str) ->
-    unquote_list_to_list(Str);
-from_url_(Bin) when is_binary(Bin) ->
-    unquote_bin_to_bin(Bin).
+
+from_url_(Data) ->
+    from_url_(Data, defaults()).
 
 
--spec unquote_list_to_list([byte()]) -> [byte()].
-unquote_list_to_list([$%|HT]) ->
+%% @doc
+%% @end
+-spec from_url(data(), options()) -> data().
+from_url(Data, Options) ->
+    from_url_(Data, Options).
+
+
+from_url_(Str, Options) when is_list(Str) ->
+    unquote_list_to_list(Str, Options);
+from_url_(Bin, Options) when is_binary(Bin) ->
+    unquote_bin_to_bin(Bin, Options).
+
+
+-spec unquote_list_to_list([byte()], options()) -> [byte()].
+unquote_list_to_list([$%|HT], _Options) ->
     [HH,HL|T] = HT,
     H = unhex(HH),
     L = unhex(HL),
     C = tobyte(H, L),
-    [C|unquote_list_to_list(T)];
-unquote_list_to_list([AC|T]) when is_integer(AC) ->
+    [C|unquote_list_to_list(T, _Options)];
+unquote_list_to_list([AC|T], _Options) when is_integer(AC) ->
     C = from_url_alias(AC),
-    [C|unquote_list_to_list(T)];
-unquote_list_to_list([]) ->
+    [C|unquote_list_to_list(T, _Options)];
+unquote_list_to_list([], _Options) ->
     [].
 
 
--spec unquote_bin_to_bin(binary()) -> binary().
-unquote_bin_to_bin(Bin) when is_binary(Bin) ->
-    unquote_bin_to_bin(Bin, <<>>).
+-spec unquote_bin_to_bin(binary(), options()) -> binary().
+unquote_bin_to_bin(Bin, Options) when is_binary(Bin) ->
+    unquote_bin_to_bin(Bin, Options, <<>>).
 
--spec unquote_bin_to_bin(binary(), binary()) -> binary().
-unquote_bin_to_bin(<<$%,HT/binary>>, Acc) ->
+-spec unquote_bin_to_bin(binary(), options(), binary()) -> binary().
+unquote_bin_to_bin(<<$%,HT/binary>>, _Options, Acc) ->
     <<HH,HL,T/binary>> = HT,
     H = unhex(HH),
     L = unhex(HL),
     C = tobyte(H, L),
-    unquote_bin_to_bin(T, <<Acc/binary, C>>);
-unquote_bin_to_bin(<<AC, T/binary>>, Acc) ->
+    unquote_bin_to_bin(T, _Options, <<Acc/binary, C>>);
+unquote_bin_to_bin(<<AC, T/binary>>, _Options, Acc) ->
     C = from_url_alias(AC),
-    unquote_bin_to_bin(T, <<Acc/binary, C>>);
-unquote_bin_to_bin(<<>>, Acc) ->
+    unquote_bin_to_bin(T, _Options, <<Acc/binary, C>>);
+unquote_bin_to_bin(<<>>, _Options, Acc) ->
     Acc.
 
 
--spec quote_list_to_list([byte()]) -> [byte()].
-quote_list_to_list([AC|T]) ->
+-spec quote_list_to_list([byte()], options()) -> [byte()].
+quote_list_to_list([AC|T], _Options) ->
     case is_url_safe(AC) of
         true ->
-            [AC|quote_list_to_list(T)];
+            [AC|quote_list_to_list(T, _Options)];
         false ->
             H = tohex(highbits(AC)),
             L = tohex(lowbits(AC)),
-            [$%,H,L|quote_list_to_list(T)]
+            [$%,H,L|quote_list_to_list(T, _Options)]
     end;
-quote_list_to_list([]) ->
+quote_list_to_list([], _Options) ->
     [].
 
 
--spec quote_bin_to_bin(binary()) -> binary().
-quote_bin_to_bin(Bin) when is_binary(Bin) ->
-    quote_bin_to_bin(Bin, <<>>).
+-spec quote_bin_to_bin(binary(), options()) -> binary().
+quote_bin_to_bin(Bin, _Options) when is_binary(Bin) ->
+    quote_bin_to_bin(Bin, _Options, <<>>).
 
--spec quote_bin_to_bin(binary(), binary()) -> binary().
-quote_bin_to_bin(<<AC, T/binary>>, Acc) ->
+-spec quote_bin_to_bin(binary(), options(), binary()) -> binary().
+quote_bin_to_bin(<<AC, T/binary>>, _Options, Acc) ->
     case is_url_safe(AC) of
         true ->
-            quote_bin_to_bin(T, <<Acc/binary, AC>>);
+            quote_bin_to_bin(T, _Options, <<Acc/binary, AC>>);
         false ->
             H = tohex(highbits(AC)),
             L = tohex(lowbits(AC)),
-            quote_bin_to_bin(T, <<Acc/binary, $%, H, L>>)
+            quote_bin_to_bin(T, _Options, <<Acc/binary, $%, H, L>>)
     end;
-quote_bin_to_bin(<<>>, Acc) ->
+quote_bin_to_bin(<<>>, _Options, Acc) ->
     Acc.
 
 
