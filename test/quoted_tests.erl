@@ -119,11 +119,18 @@ decode_safe_prefix_test_() ->
 
 -ifdef(PROPER).
 
+encoded() ->
+    HexChars = oneof("0123456789abcdefABCDEF"),
+    MaybeHex = frequency([{10, HexChars}, {1, byte()}]),
+    MPercent = frequency([{10, $%}, {1, byte()}]),
+    Part = ?LET({A,B,C}, {MPercent, MaybeHex, MaybeHex}, [A,B,C]),
+    ?LET(IO, list(Part), iolist_to_binary(IO)).
+
 bstring() ->
-    list(byte()).
+    encoded().
 
 binstring() ->
-    binary().
+    ?LET(Bin, encoded(), binary_to_list(Bin)).
 
 prop_list_inv() ->
     ?FORALL(Input, bstring(),
