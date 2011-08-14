@@ -20,10 +20,21 @@
 /* The corresponding erlang functions are implemented
    in the src/quoted.erl file. */
 
-static bool is_hex(unsigned char c);
-static bool is_safe(unsigned char c);
-static unsigned char unhex(unsigned char c);
-static unsigned char tohexlower(unsigned char c);
+typedef struct {
+    bool is_safe_table[256];
+    unsigned char unhex_table[256];
+    unsigned char tohex_table[256];
+} quoted_priv_data;
+
+typedef enum {
+    Q_INVALID,
+    Q_LIST,
+    Q_BINARY
+} quoted_input_t;
+
+static bool is_safe_tab(const unsigned char c, const quoted_priv_data* data);
+static unsigned char unhex_tab(const unsigned char c, const quoted_priv_data* data);
+static unsigned char tohex_tab(const unsigned char c, const quoted_priv_data* data);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -33,65 +44,92 @@ static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info);
 static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info);
 static void unload(ErlNifEnv* env, void* priv);
 
-static int load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
-    return 0;
+static ERL_NIF_TERM true_ATOM;
+
+static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
+{
+    quoted_priv_data* priv = enif_alloc(sizeof(quoted_priv_data));
+    if(priv == NULL) {
+        return EXIT_FAILURE;
+    }
+
+    enif_make_existing_atom(env, "true", &true_ATOM,  ERL_NIF_LATIN1);
+
+    int i = 0;
+    memset(priv->is_safe_table, false, 256);
+    for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = true; }
+    for(i = 'a'; i <= 'z'; i++) { priv->is_safe_table[i] = true; }
+    for(i = 'A'; i <= 'Z'; i++) { priv->is_safe_table[i] = true; }
+    priv->is_safe_table['.'] = true;
+    priv->is_safe_table['~'] = true;
+    priv->is_safe_table['-'] = true;
+    priv->is_safe_table['_'] = true;
+
+    memset(priv->unhex_table, 0xF0, 256);
+    for(i = '0'; i <= '9'; i++) { priv->unhex_table[i] = i - '0'; }
+    for(i = 'A'; i <= 'F'; i++) { priv->unhex_table[i] = i - 'A' + 10; }
+    for(i = 'a'; i <= 'f'; i++) { priv->unhex_table[i] = i - 'a' + 10; }
+
+    memset(priv->tohex_table, false, 256);
+    for(i = 0;  i <= 9;  i++) { priv->tohex_table[i] = '0' + i; }
+    for(i = 10; i <= 16; i++) { priv->tohex_table[i] = 'a' + (i - 10); }
+
+    *priv_data = priv;
+    return EXIT_SUCCESS;
 }
 
 static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info) {
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static void unload(ErlNifEnv* env, void* priv) {
+    enif_free(priv);
     return;
 }
 
 ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    return enif_make_atom(env, "true");
+    return true_ATOM;
 }
 
-ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
     ErlNifBinary input;
     ErlNifBinary output;
-    ERL_NIF_TERM temp;
-    bool output_bin;
+    ERL_NIF_TERM return_value;
+    quoted_input_t input_type = Q_INVALID;
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
-    unsigned char c0 = 0; // Current character
-    unsigned char c1 = 0; // Current character
-    unsigned char c2 = 0; // Current character
-
+    unsigned char c = 0; // Current character
+    unsigned char d = 0; // Current character
+    unsigned char e = 0; // Current character
 
     /* Determine type of input.
      * The input format also determines the output format. The caller
      * expects the output to be of the same type as the input format.
      */
-    if(enif_is_list(env, argv[0])) {
-        output_bin = false;
-        if(!enif_inspect_iolist_as_binary(env, argv[0], &input)) {
-            return enif_make_badarg(env);
-        }
+    if(enif_is_list(env, argv[0])
+            && enif_inspect_iolist_as_binary(env, argv[0], &input)) {
+        input_type = Q_LIST;
     }
-    else if(enif_is_binary(env, argv[0])) {
-        output_bin = true;
-        if(!enif_inspect_binary(env, argv[0], &input)) {
-            return enif_make_badarg(env);
-        }
+    else if(enif_is_binary(env, argv[0])
+            && enif_inspect_binary(env, argv[0], &input)) {
+        input_type = Q_BINARY;
     }
-    else {
+    if(input_type == Q_INVALID) {
         return enif_make_badarg(env);
     }
-
 
     /* Scan through the input binary for any occurances of '+' or '%'.
      */
     while(i < input.size) {
-        c0 = input.data[i];
-        if(c0 == '%') { break; }
-        if(c0 == '+') { break; }
+        c = input.data[i];
+        if(c == '%') { break; }
+        if(c == '+') { break; }
         i++;
     }
 
@@ -104,11 +142,6 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      * This ensures that we only need to realloc once to shrink
      * the size of the buffer if the input buffer contains quoted
      * characters.
-     *
-     * XXX: A binary returned from enif_alloc_binary is not released when the
-     *      NIF call returns, as binaries returned from enif_inspect..binary are.
-     *      If the enif_alloc_binary call succeeds we _MUST_ release it or
-     *      transfer ownership to an ERL_NIF_TERM before returning.
      */
     if(!enif_alloc_binary(input.size, &output)) {
         return enif_make_badarg(env);
@@ -117,142 +150,131 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     j = i;
 
     while(i < input.size) {
-        c0 = input.data[i];
-        if('%' == c0) {
+        c = input.data[i];
+        if(c == '%') {
             if(input.size < i + 3) {
-                goto error_allocated;
+                enif_release_binary(&output);
+                return enif_make_badarg(env);
             }
-            c1 = input.data[i + 1];
-            c2 = input.data[i + 2];
-            if(!is_hex(c1) || !is_hex(c2)) {
-                goto error_allocated;
+            d = unhex_tab(input.data[++i], priv);
+            e = unhex_tab(input.data[++i], priv);
+            c = (d << 4) | e;
+            if((d | e) & 0xF0) {
+                enif_release_binary(&output);
+                return enif_make_badarg(env);
             }
-            c0 = (unhex(c1) << 4) | unhex(c2);
-            i += 3;
         }
-        else {
+        else if(c == '+') {
             // Spaces may be encoded as "%20" or "+". The first is standard,
             // but the second very popular. This library does " "<->"%20", 
             // but also " "<--"+" for compatibility with things like jQuery.
-            if (c0=='+') {c0 = ' ';};
-            i += 1;
+            c = ' ';
         }
-        
-        output.data[j++] = c0;
+        i++;
+        output.data[j++] = c;
     }
 
-    if(output_bin) {
-        if(!enif_realloc_binary(&output, j)) {
-            /* XXX: handle reallocation failure as invalid input */
-            goto error_allocated;
-        }
+    if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
         return enif_make_binary(env, &output);
     }
-    else {
-        temp = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
+    else if(input_type == Q_LIST) {
+        return_value = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
         enif_release_binary(&output);
-        return temp;
+        return return_value;
     }
-
-error_allocated:
     enif_release_binary(&output);
     return enif_make_badarg(env);
 }
 
 
-ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
     ErlNifBinary input;
     ErlNifBinary output;
-    ERL_NIF_TERM temp;
-    bool output_bin;
-    
+    ERL_NIF_TERM return_value;
+    quoted_input_t input_type = Q_INVALID;
+    unsigned int i = 0; // Position in input
+    unsigned int j = 0; // Position in output
+    unsigned char c = 0; // Current character
+
 
     /* Determine type of input.
      * See comment on output format in unquote_iolist(...)
      */
-    if(enif_is_list(env, argv[0])) {
-        output_bin = false;
-        if(!enif_inspect_iolist_as_binary(env, argv[0], &input)) {
-            return enif_make_badarg(env);
-        }
+    if(enif_is_list(env, argv[0])
+            && enif_inspect_iolist_as_binary(env, argv[0], &input)) {
+        input_type = Q_LIST;
     }
-    else if(enif_is_binary(env, argv[0])) {
-        output_bin = true;
-        if(!enif_inspect_binary(env, argv[0], &input)) {
-            return enif_make_badarg(env);
-        }
+    else if(enif_is_binary(env, argv[0])
+            && enif_inspect_binary(env, argv[0], &input)) {
+        input_type = Q_BINARY;
     }
-    else {
+    if(input_type == Q_INVALID) {
         return enif_make_badarg(env);
     }
 
+    while(i < input.size) {
+        c = input.data[i];
+        if(!is_safe_tab(c, priv)) { break; }
+        i++;
+    }
+
+    if(i == input.size) {
+        return argv[0];
+    }
 
     /* Allocate an output buffer that is three times larger than the input
      * buffer. We only need to realloc once to shrink the size of the buffer
      * if the input contains no charactes that needs to be quoted.
-     *
-     * XXX: See comment in unquote_iolist.
      */
     if(!enif_alloc_binary(input.size * 3, &output)) {
         return enif_make_badarg(env);
     }
+    memcpy(output.data, input.data, i);
+    j = i;
 
-    unsigned int i = 0; // Position in input
-    unsigned int j = 0; // Position in output
-    unsigned char c = 0; // Current character
     while(i < input.size) {
         c = input.data[i];
-        if(is_safe(c)) {
+        if(is_safe_tab(c, priv)) {
             output.data[j++] = c;
-            i++;
         }
         else {
             output.data[j++] = '%';
-            output.data[j++] = tohexlower(c >> 4);
-            output.data[j++] = tohexlower(c & 15);
-            i++;
+            output.data[j++] = tohex_tab(c >> 4, priv);
+            output.data[j++] = tohex_tab(c & 0x0F, priv);
         }
+        i++;
     }
 
-    if(output_bin) {
-        if(!enif_realloc_binary(&output, j)) {
-            enif_release_binary(&output);
-            return enif_make_badarg(env);
-        }
+    if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
         return enif_make_binary(env, &output);
     }
-    else {
-        temp = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
+    else if(input_type == Q_LIST) {
+        return_value = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
         enif_release_binary(&output);
-        return temp;
+        return return_value;
     }
+    enif_release_binary(&output);
+    return enif_make_badarg(env);
 }
 
-inline bool is_hex(unsigned char c) {
-    return (c >= '0' && c <= '9')
-        || (c >= 'A' && c <= 'F')
-        || (c >= 'a' && c <= 'f');
+inline bool
+is_safe_tab(const unsigned char c, const quoted_priv_data* data)
+{
+    return data->is_safe_table[c];
 }
 
-inline bool is_safe(unsigned char c) {
-    return (c >= '0' && c <= '9')
-        || (c >= 'A' && c <= 'Z')
-        || (c >= 'a' && c <= 'z')
-        || (c == '.')
-        || (c == '~')
-        || (c == '-')
-        || (c == '_');
+inline unsigned char
+unhex_tab(const unsigned char c, const quoted_priv_data* data)
+{
+    return data->unhex_table[c];
 }
 
-inline unsigned char unhex(unsigned char c) {
-    if(c >= '0' && c <= '9') { return c - '0'; }
-    if(c >= 'A' && c <= 'F') { return c - 'A' + 10; }
-    if(c >= 'a' && c <= 'f') { return c - 'a' + 10; }
-}
-
-unsigned char tohexlower(unsigned char c) {
-    if(c < 10) { return '0' + c; }
-    if(c < 16) { return 'a' + (c - 10); }
+inline unsigned char
+tohex_tab(const unsigned char c, const quoted_priv_data* data)
+{
+    return data->tohex_table[c];
 }
 
 static ErlNifFunc nif_funcs[] = {
