@@ -125,7 +125,7 @@ bstring() ->
 binstring() ->
     binary().
 
-list_inv_prop() ->
+prop_list_inv() ->
     ?FORALL(Input, bstring(),
     begin
         Quoted = ?q:to_url(Input),
@@ -133,7 +133,7 @@ list_inv_prop() ->
         Unquoted == Input
     end).
 
-bin_inv_prop() ->
+prop_bin_inv() ->
     ?FORALL(Input, binstring(),
     begin
         Quoted = ?q:to_url(Input),
@@ -141,29 +141,24 @@ bin_inv_prop() ->
         Unquoted == Input
     end).
 
-bin_oracle_decode_prop() ->
+prop_bin_oracle_decode() ->
     ?FORALL(Input, binstring(),
         safe_from_url(native, Input) =:= safe_from_url(erlang, Input)).
 
-list_oracle_decode_prop() ->
+prop_list_oracle_decode() ->
     ?FORALL(Input, bstring(),
         safe_from_url(native, Input) =:= safe_from_url(erlang, Input)).
 
-bin_oracle_encode_prop() ->
+prop_bin_oracle_encode() ->
     ?FORALL(Input, binstring(),
         ?q:to_url(Input) =:= ?q:to_url_(Input)).
 
-list_oracle_encode_prop() ->
+prop_list_oracle_encode() ->
     ?FORALL(Input, bstring(),
         ?q:to_url(Input) =:= ?q:to_url_(Input)).
 
-
-list_inv_test() -> ?assert(proper:quickcheck(list_inv_prop())).
-bin_inv_test() -> ?assert(proper:quickcheck(bin_inv_prop())).
-bin_oracle_decode_test() -> ?assert(proper:quickcheck(bin_oracle_decode_prop())).
-list_oracle_decode_test() -> ?assert(proper:quickcheck(list_oracle_decode_prop())).
-bin_oracle_encode_test() -> ?assert(proper:quickcheck(bin_oracle_encode_prop())).
-list_oracle_encode_test() -> ?assert(proper:quickcheck(list_oracle_encode_prop())).
+proper_test() ->
+     ?assertEqual([], proper:module(?MODULE, [{to_file, user}])).
 
 safe_from_url(Impl, String) ->
     Result = case Impl of
