@@ -24,7 +24,7 @@
          from_url/2]).
 
 %% internal functions
--export([to_url_/1, from_url_/1]).
+-export([to_url_/1, from_url_/1, to_url_/2, from_url_/2]).
 -export([is_native/0]).
 
 
