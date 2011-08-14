@@ -1,6 +1,6 @@
 {application, quoted, [
     {description, "Library application to handle quoted strings"},
-    {vsn, "1.0.3"},
+    {vsn, "1.1.0"},
     {modules, []},
     {registered, []},
     {applications, [kernel, stdlib]},
