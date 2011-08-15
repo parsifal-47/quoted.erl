@@ -21,6 +21,18 @@
 -endif.
 -define(q, quoted).
 
+make_test_() ->
+    [?_assertMatch(_, ?q:make([])),
+     ?_assertMatch(_, ?q:make([{charcase, lower}])),
+     ?_assertMatch(_, ?q:make([{charcase, upper}])),
+     ?_assertError(badarg, ?q:make([{charcase, other}])),
+     ?_assertMatch(_, ?q:make([{strict, true}])),
+     ?_assertMatch(_, ?q:make([{strict, false}])),
+     ?_assertError(badarg, ?q:make([{strict, other}])),
+     ?_assertMatch(_, ?q:make([{plus, true}])),
+     ?_assertMatch(_, ?q:make([{plus, false}])),
+     ?_assertError(badarg, ?q:make([{plus, other}]))].
+
 % Library behaviour:
 %   " "<->"%20"
 %   " "<--"+"

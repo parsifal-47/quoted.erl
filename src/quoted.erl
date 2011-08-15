@@ -68,16 +68,22 @@ is_native() -> false.
 make(OptionsList) ->
     Default = defaults(),
     Case = case lists:keyfind(charcase, 1, OptionsList) of
-        {charcase, ICase} -> ICase;
-        false -> Default#options.charcase
+        {charcase, lower} -> lower;
+        {charcase, upper} -> upper;
+        false -> Default#options.charcase;
+        _ -> erlang:error(badarg)
     end,
     Strict = case lists:keyfind(strict, 1, OptionsList) of
-        {strict, IStrict} -> IStrict;
-        false -> Default#options.strict
+        {strict, true} -> true;
+        {strict, false} -> false;
+        false -> Default#options.strict;
+        _ -> erlang:error(badarg)
     end,
     Plus = case lists:keyfind(plus, 1, OptionsList) of
-        {plus, IPlus} -> IPlus;
-        false -> Default#options.plus
+        {plus, true} -> true;
+        {plus, false} -> false;
+        false -> Default#options.plus;
+        _ -> erlang:error(badarg)
     end,
     #options{charcase=Case, strict=Strict, plus=Plus}.
 
