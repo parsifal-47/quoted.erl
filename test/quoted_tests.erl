@@ -196,44 +196,44 @@ binstring() ->
     ?LET(Bin, encoded(), binary_to_list(Bin)).
 
 prop_list_inv() ->
-    ?FORALL(Input, bstring(),
+    ?FORALL({Input, Opts}, {bstring(), quoted:options()},
     begin
-        Quoted = ?q:to_url(Input),
-        Unquoted = ?q:from_url(Quoted),
+        Quoted = ?q:to_url(Input, Opts),
+        Unquoted = ?q:from_url(Quoted, Opts),
         Unquoted == Input
     end).
 
 prop_bin_inv() ->
-    ?FORALL(Input, binstring(),
+    ?FORALL({Input, Opts}, {binstring(), quoted:options()},
     begin
-        Quoted = ?q:to_url(Input),
-        Unquoted = ?q:from_url(Quoted),
+        Quoted = ?q:to_url(Input, Opts),
+        Unquoted = ?q:from_url(Quoted, Opts),
         Unquoted == Input
     end).
 
 prop_bin_oracle_decode() ->
-    ?FORALL(Input, binstring(),
-        safe_from_url(native, Input) =:= safe_from_url(erlang, Input)).
+    ?FORALL({Input, Opts}, {binstring(), quoted:options()},
+        safe_from_url(native, Input, Opts) =:= safe_from_url(erlang, Input, Opts)).
 
 prop_list_oracle_decode() ->
-    ?FORALL(Input, bstring(),
-        safe_from_url(native, Input) =:= safe_from_url(erlang, Input)).
+    ?FORALL({Input, Opts}, {bstring(), quoted:options()},
+        safe_from_url(native, Input, Opts) =:= safe_from_url(erlang, Input, Opts)).
 
 prop_bin_oracle_encode() ->
-    ?FORALL(Input, binstring(),
-        ?q:to_url(Input) =:= ?q:to_url_(Input)).
+    ?FORALL({Input, Opts}, {binstring(), quoted:options()},
+        ?q:to_url(Input, Opts) =:= ?q:to_url_(Input, Opts)).
 
 prop_list_oracle_encode() ->
-    ?FORALL(Input, bstring(),
-        ?q:to_url(Input) =:= ?q:to_url_(Input)).
+    ?FORALL({Input, Opts}, {bstring(), quoted:options()},
+        ?q:to_url(Input, Opts) =:= ?q:to_url_(Input, Opts)).
 
-proper_test() ->
-     ?assertEqual([], proper:module(?MODULE, [{to_file, user}])).
+proper_test_() ->
+     {timeout, 5000, ?_assertEqual([], proper:module(?MODULE, [{to_file, user}]))}.
 
-safe_from_url(Impl, String) ->
+safe_from_url(Impl, String, Opts) ->
     Result = case Impl of
-        erlang -> (catch ?q:from_url_(String));
-        native -> (catch ?q:from_url(String))
+        erlang -> (catch ?q:from_url_(String, Opts));
+        native -> (catch ?q:from_url(String, Opts))
     end,
     case Result of
         {'EXIT', _} -> error;
