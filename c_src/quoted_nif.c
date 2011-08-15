@@ -272,6 +272,9 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         if(is_safe_tab(c, priv)) {
             output.data[j++] = c;
         }
+        else if(c == ' ' && opts.plus) {
+            output.data[j++] = '+';
+        }
         else {
             output.data[j++] = '%';
             output.data[j++] = tohex_tab(c >> 4, priv);

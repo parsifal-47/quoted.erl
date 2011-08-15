@@ -31,12 +31,12 @@
 
 -type data() :: [byte()] | binary().
 -type option()
-   :: {charcase, lower | upper}
+   :: {lower, boolean()}
     | {strict, boolean()}
     | {plus, boolean()}.
 
 -record(options, {
-    charcase :: lower | upper,
+    lower :: boolean(),
     strict :: boolean(),
     plus :: boolean()}).
 -opaque options() :: #options{}.
@@ -67,10 +67,10 @@ is_native() -> false.
 -spec make([option()]) -> options().
 make(OptionsList) ->
     Default = defaults(),
-    Case = case lists:keyfind(charcase, 1, OptionsList) of
-        {charcase, lower} -> lower;
-        {charcase, upper} -> upper;
-        false -> Default#options.charcase;
+    Lower = case lists:keyfind(charcase, 1, OptionsList) of
+        {charcase, lower} -> true;
+        {charcase, upper} -> false;
+        false -> Default#options.lower;
         _ -> erlang:error(badarg)
     end,
     Strict = case lists:keyfind(strict, 1, OptionsList) of
@@ -85,11 +85,11 @@ make(OptionsList) ->
         false -> Default#options.plus;
         _ -> erlang:error(badarg)
     end,
-    #options{charcase=Case, strict=Strict, plus=Plus}.
+    #options{lower=Lower, strict=Strict, plus=Plus}.
 
 %% @private Return the default options.
 defaults() ->
-    #options{charcase=lower, strict=false, plus=false}.
+    #options{lower=true, strict=false, plus=false}.
 
 
 %% @doc
@@ -173,6 +173,8 @@ unquote_bin_to_bin(<<>>, _Options, Acc) ->
 
 
 -spec quote_list_to_list([byte()], options()) -> [byte()].
+quote_list_to_list([$ |T], Options) when Options#options.plus ->
+    [$+|quote_list_to_list(T, Options)];
 quote_list_to_list([AC|T], _Options) ->
     case is_url_safe(AC) of
         true ->
@@ -191,6 +193,8 @@ quote_bin_to_bin(Bin, _Options) when is_binary(Bin) ->
     quote_bin_to_bin(Bin, _Options, <<>>).
 
 -spec quote_bin_to_bin(binary(), options(), binary()) -> binary().
+quote_bin_to_bin(<<$ , T/binary>>, Options, Acc) when Options#options.plus ->
+    quote_bin_to_bin(T, Options, <<Acc/binary, $+>>);
 quote_bin_to_bin(<<AC, T/binary>>, _Options, Acc) ->
     case is_url_safe(AC) of
         true ->

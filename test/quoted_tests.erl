@@ -40,15 +40,28 @@ make_test_() ->
 % Simple and more according to standard, but still supports the popular +
 % encoding.
 space_char_test_() ->
-    % " "<--"%20"
-    [?_assertEqual(" ", ?q:from_url("%20")),
+    Plus = quoted:make([{plus, true}]),
+    NoPlus = quoted:make([{plus, false}]),
+    [%% " " ->  "%20"
+     ?_assertEqual(" ", ?q:from_url("%20")),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"%20">>)),
-    % " "<--"+"
+     ?_assertEqual(" ", ?q:from_url("%20", NoPlus)),
+     ?_assertEqual(<<" ">>, ?q:from_url(<<"%20">>, NoPlus)),
+     %% "+" -> " "
      ?_assertEqual(" ", ?q:from_url("+")),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>)),
-    % " "-->"%20" 
+     ?_assertEqual(" ", ?q:from_url("+", Plus)),
+     ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>, Plus)),
+     %% " " -> "%20"
      ?_assertEqual("%20", ?q:to_url(" ")),
-     ?_assertEqual(<<"%20">>, ?q:to_url(<<" ">>))].
+     ?_assertEqual(<<"%20">>, ?q:to_url(<<" ">>)),
+     ?_assertEqual("%20", ?q:to_url(" ", NoPlus)),
+     ?_assertEqual(<<"%20">>, ?q:to_url(<<" ">>, NoPlus)),
+     %% " " -> "+"
+     ?_assertEqual("+", ?q:to_url(" ", Plus)),
+     ?_assertEqual(<<"+">>, ?q:to_url(<<" ">>, Plus))
+    ].
+
 
 %% Verify that the decoder throws a badarg error if any of the
 %% two characters following a percent-character isn't a valid
