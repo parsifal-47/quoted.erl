@@ -26,6 +26,24 @@ typedef struct {
     unsigned char tohex_table[256];
 } quoted_priv_data;
 
+
+#define quoted_opt_lowercase 1
+#define quoted_opt_strict 2
+#define quoted_opt_plus 3
+#define quoted_opts_arity 4
+typedef struct {
+    bool lowercase;
+    bool strict;
+    bool plus;
+} quoted_opts_t;
+
+static const quoted_opts_t quoted_opts_defaults = {
+    .lowercase = true,
+    .strict = false,
+    .plus = false
+};
+
+
 typedef enum {
     Q_INVALID,
     Q_LIST,
@@ -35,6 +53,7 @@ typedef enum {
 static bool is_safe_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char unhex_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char tohex_tab(const unsigned char c, const quoted_priv_data* data);
+static bool read_options(ErlNifEnv* env, ERL_NIF_TERM, quoted_opts_t* opts);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -45,6 +64,8 @@ static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM lo
 static void unload(ErlNifEnv* env, void* priv);
 
 static ERL_NIF_TERM true_ATOM;
+static ERL_NIF_TERM false_ATOM;
+static ERL_NIF_TERM options_ATOM;
 
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
@@ -54,6 +75,8 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     }
 
     enif_make_existing_atom(env, "true", &true_ATOM,  ERL_NIF_LATIN1);
+    enif_make_existing_atom(env, "false", &false_ATOM,  ERL_NIF_LATIN1);
+    enif_make_existing_atom(env, "options", &options_ATOM, ERL_NIF_LATIN1);
 
     int i = 0;
     memset(priv->is_safe_table, false, 256);
@@ -95,9 +118,11 @@ ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     return true_ATOM;
 }
 
+
 ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
+    quoted_opts_t opts = quoted_opts_defaults;
     ErlNifBinary input;
     ErlNifBinary output;
     ERL_NIF_TERM return_value;
@@ -107,6 +132,10 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned char c = 0; // Current character
     unsigned char d = 0; // Current character
     unsigned char e = 0; // Current character
+
+    if(argc == 2 && !read_options(env, argv[1], &opts)) {
+        return enif_make_badarg(env);
+    }
 
     /* Determine type of input.
      * The input format also determines the output format. The caller
@@ -190,6 +219,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
+    quoted_opts_t opts = quoted_opts_defaults;
     ErlNifBinary input;
     ErlNifBinary output;
     ERL_NIF_TERM return_value;
@@ -198,6 +228,9 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned int j = 0; // Position in output
     unsigned char c = 0; // Current character
 
+    if(argc == 2 && !read_options(env, argv[1], &opts)) {
+        return enif_make_badarg(env);
+    }
 
     /* Determine type of input.
      * See comment on output format in unquote_iolist(...)
@@ -277,10 +310,64 @@ tohex_tab(const unsigned char c, const quoted_priv_data* data)
     return data->tohex_table[c];
 }
 
+bool
+read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
+{
+    unsigned int arity;
+    const ERL_NIF_TERM* elems;
+
+    if(!enif_get_tuple(env, rec, &arity, &elems)) {
+        return false;
+    }
+    if(arity != quoted_opts_arity) {
+        return false;
+    }
+    if(!enif_is_identical(elems[0], options_ATOM)) {
+        return false;
+    }
+
+    /* get #options.lowercase */
+    if(enif_is_identical(elems[quoted_opt_lowercase], true_ATOM)) {
+        opts->lowercase = true;
+    }
+    else if(enif_is_identical(elems[quoted_opt_lowercase], false_ATOM)) {
+        opts->lowercase = false;
+    }
+    else{
+        return false;
+    }
+
+    /* get #options.strict */
+    if(enif_is_identical(elems[quoted_opt_strict], true_ATOM)) {
+        opts->strict = true;
+    }
+    else if(enif_is_identical(elems[quoted_opt_strict], false_ATOM)) {
+        opts->strict = false;
+    }
+    else{
+        return false;
+    }
+
+    /* get #options.plus */
+    if(enif_is_identical(elems[quoted_opt_plus], true_ATOM)) {
+        opts->plus = true;
+    }
+    else if(enif_is_identical(elems[quoted_opt_plus], false_ATOM)) {
+        opts->plus = false;
+    }
+    else{
+        return false;
+    }
+    return true;
+}
+
+
 static ErlNifFunc nif_funcs[] = {
     {"is_native", 0, unquote_loaded},
     {"from_url", 1, unquote_iolist},
-    {"to_url", 1, quote_iolist}
+    {"from_url", 2, unquote_iolist},
+    {"to_url", 1, quote_iolist},
+    {"to_url", 2, quote_iolist}
 };
 
 ERL_NIF_INIT(quoted, nif_funcs, load, reload, upgrade, unload)
