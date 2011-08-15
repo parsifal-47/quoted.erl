@@ -35,7 +35,7 @@ make_test_() ->
 
 % Library behaviour:
 %   " "<->"%20"
-%   " "<--"+"
+%   " "<->"+"
 %
 % Simple and more according to standard, but still supports the popular +
 % encoding.
