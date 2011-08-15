@@ -23,8 +23,8 @@
 typedef struct {
     bool is_safe_table[256];
     unsigned char unhex_table[256];
-    unsigned char tohex_lower_table[17];
-    unsigned char tohex_upper_table[17];
+    unsigned char tohex_lower_table[16];
+    unsigned char tohex_upper_table[16];
 } quoted_priv_data;
 
 
@@ -93,13 +93,13 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     for(i = 'A'; i <= 'F'; i++) { priv->unhex_table[i] = i - 'A' + 10; }
     for(i = 'a'; i <= 'f'; i++) { priv->unhex_table[i] = i - 'a' + 10; }
 
-    memset(priv->tohex_lower_table, false, 17);
-    for(i = 0;  i <= 9;  i++) { priv->tohex_lower_table[i] = '0' + i; }
-    for(i = 10; i <= 16; i++) { priv->tohex_lower_table[i] = 'a' + (i - 10); }
+    memset(priv->tohex_lower_table, false, 16);
+    for(i = 0;  i < 10;  i++) { priv->tohex_lower_table[i] = '0' + i; }
+    for(i = 10; i < 16; i++) { priv->tohex_lower_table[i] = 'a' + (i - 10); }
 
-    memset(priv->tohex_upper_table, false, 17);
-    for(i = 0;  i <= 9;  i++) { priv->tohex_upper_table[i] = '0' + i; }
-    for(i = 10; i <= 16; i++) { priv->tohex_upper_table[i] = 'A' + (i - 10); }
+    memset(priv->tohex_upper_table, false, 16);
+    for(i = 0;  i < 10;  i++) { priv->tohex_upper_table[i] = '0' + i; }
+    for(i = 10; i < 16; i++) { priv->tohex_upper_table[i] = 'A' + (i - 10); }
 
     *priv_data = priv;
     return EXIT_SUCCESS;
