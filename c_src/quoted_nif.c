@@ -271,9 +271,8 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    while(i < input.size) {
+    for(i = 0; i < input.size; i++) {
         num_safe += priv->is_safe_table[input.data[i]];
-        i++;
     }
     num_unsafe = input.size - num_safe;
     i = 0;
