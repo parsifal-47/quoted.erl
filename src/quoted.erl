@@ -89,7 +89,7 @@ make(OptionsList) ->
 
 %% @private Return the default options.
 defaults() ->
-    #options{lower=true, strict=false, plus=false}.
+    #options{lower=true, strict=false, plus=true}.
 
 
 %% @doc
@@ -155,9 +155,15 @@ unquote_list_to_list([$%|HT=[HH,HL|T]], Options) ->
     end;
 unquote_list_to_list([$%|_], Options) when Options#options.strict ->
     erlang:error(badarg);
-unquote_list_to_list([AC|T], _Options) when is_integer(AC) ->
-    C = from_url_alias(AC),
-    [C|unquote_list_to_list(T, _Options)];
+unquote_list_to_list([$+|T], Options) when Options#options.plus ->
+    [$ |unquote_list_to_list(T, Options)];
+unquote_list_to_list([C|T], Options) when Options#options.strict ->
+    case is_url_safe(C) of
+        false -> erlang:error(badarg);
+        true -> [C|unquote_list_to_list(T, Options)]
+    end;
+unquote_list_to_list([C|T], Options) ->
+    [C|unquote_list_to_list(T, Options)];
 unquote_list_to_list([], _Options) ->
     [].
 
@@ -181,8 +187,15 @@ unquote_bin_to_bin(<<$%,HH,HL,T/binary>>, Options, Acc) ->
     end;
 unquote_bin_to_bin(<<$%, _/binary>>, Options, _Acc) when Options#options.strict ->
     erlang:error(badarg);
-unquote_bin_to_bin(<<AC, T/binary>>, _Options, Acc) ->
-    C = from_url_alias(AC),
+unquote_bin_to_bin(<<$+, T/binary>>, Options, Acc) when Options#options.plus ->
+    unquote_bin_to_bin(T, Options, <<Acc/binary, $ >>);
+
+unquote_bin_to_bin(<<C, T/binary>>, Options, Acc) when Options#options.strict ->
+    case is_url_safe(C) of
+        false -> erlang:error(badarg);
+        true -> unquote_bin_to_bin(T, Options, <<Acc/binary, C>>)
+    end;
+unquote_bin_to_bin(<<C, T/binary>>, _Options, Acc) ->
     unquote_bin_to_bin(T, _Options, <<Acc/binary, C>>);
 unquote_bin_to_bin(<<>>, _Options, Acc) ->
     Acc.

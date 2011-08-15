@@ -21,7 +21,7 @@
    in the src/quoted.erl file. */
 
 typedef struct {
-    unsigned char is_safe_table[256];
+    unsigned int is_safe_table[256];
     unsigned char unhex_table[256];
     unsigned char tohex_lower_table[16];
     unsigned char tohex_upper_table[16];
@@ -41,7 +41,7 @@ typedef struct {
 static const quoted_opts_t quoted_opts_defaults = {
     .lower = true,
     .strict = false,
-    .plus = false
+    .plus = true
 };
 
 
@@ -79,7 +79,7 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     enif_make_existing_atom(env, "options", &options_ATOM, ERL_NIF_LATIN1);
 
     int i = 0;
-    memset(priv->is_safe_table, 0, 256);
+    memset(priv->is_safe_table, 0, 256*sizeof(int));
     for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = 1; }
     for(i = 'a'; i <= 'z'; i++) { priv->is_safe_table[i] = 1; }
     for(i = 'A'; i <= 'Z'; i++) { priv->is_safe_table[i] = 1; }
@@ -131,11 +131,13 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     ErlNifBinary output;
     ERL_NIF_TERM return_value;
     quoted_input_t input_type = Q_INVALID;
+    unsigned int num_safe = 0;
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
     unsigned char c = 0; // Current character
     unsigned char d = 0; // Current character
     unsigned char e = 0; // Current character
+    const unsigned int* is_safe_table = priv->is_safe_table;
 
     if(argc == 2 && !read_options(env, argv[1], &opts)) {
         return enif_make_badarg(env);
@@ -157,19 +159,16 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    /* Scan through the input binary for any occurances of '+' or '%'.
-     */
-    while(i < input.size) {
-        c = input.data[i];
-        if(c == '%') { break; }
-        if(c == '+') { break; }
-        i++;
+    for(i = 0; i < input.size; i++) {
+        num_safe = is_safe_table[input.data[i]];
     }
+    i = 0;
 
     /* Nothing to decode. Return input term as output term */
-    if(i == input.size) {
+    if(num_safe == input.size) {
         return argv[0];
     }
+    num_safe = 0;
 
     /* Allocate an output buffer of the same size as the input.
      * This ensures that we only need to realloc once to shrink
@@ -179,8 +178,6 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     if(!enif_alloc_binary(input.size, &output)) {
         return enif_make_badarg(env);
     }
-    memcpy(output.data, input.data, i);
-    j = i;
 
     while(i < input.size) {
         c = input.data[i];
@@ -191,6 +188,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                 return enif_make_badarg(env);
             }
             else if(size_error) {
+                num_safe++;
                 goto output;
             }
 
@@ -207,17 +205,30 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                 i--;
                 i--;
                 c = '%';
+                num_safe++;
+            }
+            else {
+                num_safe++;
             }
         }
-        else if(c == '+') {
+        else if(c == '+' && opts.plus) {
             // Spaces may be encoded as "%20" or "+". The first is standard,
             // but the second very popular. This library does " "<->"%20", 
             // but also " "<--"+" for compatibility with things like jQuery.
             c = ' ';
+            num_safe++;
+        }
+        else {
+            num_safe += is_safe_table[c];
         }
         output:
         i++;
         output.data[j++] = c;
+    }
+
+    if(opts.strict && num_safe != j) {
+        enif_release_binary(&output);
+        return enif_make_badarg(env);
     }
 
     if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
@@ -252,7 +263,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     }
     const unsigned char* tohex_table =
         opts.lower ? priv->tohex_lower_table : priv->tohex_upper_table;
-    const unsigned char* is_safe_table = priv->is_safe_table;
+    const unsigned int* is_safe_table = priv->is_safe_table;
 
     /* Determine type of input.
      * See comment on output format in unquote_iolist(...)

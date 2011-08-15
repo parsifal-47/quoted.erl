@@ -43,8 +43,6 @@ space_char_test_() ->
     Plus = ?q:make([{plus, true}]),
     NoPlus = ?q:make([{plus, false}]),
     [%% " " ->  "%20"
-     ?_assertEqual(" ", ?q:from_url("%20")),
-     ?_assertEqual(<<" ">>, ?q:from_url(<<"%20">>)),
      ?_assertEqual(" ", ?q:from_url("%20", NoPlus)),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"%20">>, NoPlus)),
      %% "+" -> " "
@@ -52,12 +50,11 @@ space_char_test_() ->
      ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>)),
      ?_assertEqual(" ", ?q:from_url("+", Plus)),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>, Plus)),
-     %% " " -> "%20"
-     ?_assertEqual("%20", ?q:to_url(" ")),
-     ?_assertEqual(<<"%20">>, ?q:to_url(<<" ">>)),
-     ?_assertEqual("%20", ?q:to_url(" ", NoPlus)),
-     ?_assertEqual(<<"%20">>, ?q:to_url(<<" ">>, NoPlus)),
+     ?_assertEqual("+", ?q:from_url("+", NoPlus)),
+     ?_assertEqual(<<"+">>, ?q:from_url(<<"+">>, NoPlus)),
      %% " " -> "+"
+     ?_assertEqual("+", ?q:to_url(" ")),
+     ?_assertEqual(<<"+">>, ?q:to_url(<<" ">>)),
      ?_assertEqual("+", ?q:to_url(" ", Plus)),
      ?_assertEqual(<<"+">>, ?q:to_url(<<" ">>, Plus))
     ].
@@ -123,6 +120,16 @@ insufficient_hex_test_() ->
      ?_assertEqual(<<"%A">>, ?q:from_url(<<"%A">>, NoStrict)),
      ?_assertError(badarg, ?q:from_url("%A", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%A">>, Strict))].
+
+unsafe_input_test_() ->
+    Strict = ?q:make([{strict, true}]),
+    NoStrict = ?q:make([{strict, false}]),
+    [?_assertEqual("@", ?q:from_url("@")),
+     ?_assertEqual(<<"@">>, ?q:from_url(<<"@">>)),
+     ?_assertEqual("@", ?q:from_url("@", NoStrict)),
+     ?_assertEqual(<<"@">>, ?q:from_url(<<"@">>, NoStrict)),
+     ?_assertError(badarg, ?q:from_url("@", Strict)),
+     ?_assertError(badarg, ?q:from_url(<<"@">>, Strict))].
 
 %% The ?_assertError(badarg, ?q:from_url(<<"%A">>)) assertion
 %% occasionally failed when running the test suite multiple times.
