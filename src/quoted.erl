@@ -315,11 +315,3 @@ is_url_safe(C) ->
         %% Unsafe
         _ -> false
     end.
-
-
--spec from_url_alias(byte()) -> byte().
-from_url_alias(C) ->
-    case C of
-        $+ -> $\ ;
-        _  -> C
-    end.
