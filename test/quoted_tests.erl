@@ -76,26 +76,24 @@ charcase_test_() ->
      ?_assertEqual(<<"%AF">>, ?q:to_url(<<16#AF>>, Upper))
     ].
 
-strict_test_() ->
-    Strict = ?q:make([{strict, true}]),
-    NoStrict = ?q:make([{strict, false}]),
-    [%% invalid hex characters following %
-     ?_assertEqual("%bg", ?q:from_url("%bg")),
-     ?_assertEqual(<<"%bg">>, ?q:from_url(<<"%bg">>)),
-     ?_assertEqual("%bg", ?q:from_url("%bg", NoStrict)),
-     ?_assertEqual(<<"%bg">>, ?q:from_url(<<"%bg">>, NoStrict)),
-     ?_assertError(badarg, ?q:from_url("%bg", Strict)),
-     ?_assertError(badarg, ?q:from_url(<<"%bg">>, Strict))].
-
 %% Verify that the decoder throws a badarg error if any of the
 %% two characters following a percent-character isn't a valid
 %% hex-character.
 invalid_hex_test_() ->
     Strict = ?q:make([{strict, true}]),
+    NoStrict = ?q:make([{strict, false}]),
     [%% Second character after % is invalid
+     ?_assertEqual("%Aj", ?q:from_url("%Aj")),
+     ?_assertEqual(<<"%Aj">>, ?q:from_url(<<"%Aj">>)),
+     ?_assertEqual("%Aj", ?q:from_url("%Aj", NoStrict)),
+     ?_assertEqual(<<"%Aj">>, ?q:from_url(<<"%Aj">>, NoStrict)),
      ?_assertError(badarg, ?q:from_url("%Aj", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%Aj">>, Strict)),
      %% First character after % is invalid
+     ?_assertEqual("%jA", ?q:from_url("%jA")),
+     ?_assertEqual(<<"%jA">>, ?q:from_url(<<"%jA">>)),
+     ?_assertEqual("%jA", ?q:from_url("%jA", NoStrict)),
+     ?_assertEqual(<<"%jA">>, ?q:from_url(<<"%jA">>, NoStrict)),
      ?_assertError(badarg, ?q:from_url("%jA", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%jA">>, Strict)),
      %% Both characters after % are invalid
