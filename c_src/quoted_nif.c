@@ -21,7 +21,7 @@
    in the src/quoted.erl file. */
 
 typedef struct {
-    bool is_safe_table[256];
+    unsigned char is_safe_table[256];
     unsigned char unhex_table[256];
     unsigned char tohex_lower_table[16];
     unsigned char tohex_upper_table[16];
@@ -79,14 +79,14 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     enif_make_existing_atom(env, "options", &options_ATOM, ERL_NIF_LATIN1);
 
     int i = 0;
-    memset(priv->is_safe_table, false, 256);
-    for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = true; }
-    for(i = 'a'; i <= 'z'; i++) { priv->is_safe_table[i] = true; }
-    for(i = 'A'; i <= 'Z'; i++) { priv->is_safe_table[i] = true; }
-    priv->is_safe_table['.'] = true;
-    priv->is_safe_table['~'] = true;
-    priv->is_safe_table['-'] = true;
-    priv->is_safe_table['_'] = true;
+    memset(priv->is_safe_table, 0, 256);
+    for(i = '0'; i <= '9'; i++) { priv->is_safe_table[i] = 1; }
+    for(i = 'a'; i <= 'z'; i++) { priv->is_safe_table[i] = 1; }
+    for(i = 'A'; i <= 'Z'; i++) { priv->is_safe_table[i] = 1; }
+    priv->is_safe_table['.'] = 1;
+    priv->is_safe_table['~'] = 1;
+    priv->is_safe_table['-'] = 1;
+    priv->is_safe_table['_'] = 1;
 
     memset(priv->unhex_table, 0xF0, 256);
     for(i = '0'; i <= '9'; i++) { priv->unhex_table[i] = i - '0'; }
@@ -246,15 +246,13 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
     unsigned char c = 0; // Current character
-    unsigned char* tohex_table = priv->tohex_upper_table;
 
     if(argc == 2 && !read_options(env, argv[1], &opts)) {
         return enif_make_badarg(env);
     }
-
-    if(opts.lower) {
-        tohex_table = priv->tohex_lower_table;
-    }
+    const unsigned char* tohex_table =
+        opts.lower ? priv->tohex_lower_table : priv->tohex_upper_table;
+    const unsigned char* is_safe_table = priv->is_safe_table;
 
     /* Determine type of input.
      * See comment on output format in unquote_iolist(...)
@@ -272,7 +270,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     }
 
     for(i = 0; i < input.size; i++) {
-        num_safe += priv->is_safe_table[input.data[i]];
+        num_safe += is_safe_table[input.data[i]];
     }
     num_unsafe = input.size - num_safe;
     i = 0;
@@ -291,7 +289,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
     while(i < input.size) {
         c = input.data[i];
-        if(is_safe_tab(c, priv)) {
+        if(is_safe_table[c]) {
             output.data[j++] = c;
         }
         else if(c == ' ' && opts.plus) {
