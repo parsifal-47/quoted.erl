@@ -40,8 +40,8 @@ make_test_() ->
 % Simple and more according to standard, but still supports the popular +
 % encoding.
 space_char_test_() ->
-    Plus = quoted:make([{plus, true}]),
-    NoPlus = quoted:make([{plus, false}]),
+    Plus = ?q:make([{plus, true}]),
+    NoPlus = ?q:make([{plus, false}]),
     [%% " " ->  "%20"
      ?_assertEqual(" ", ?q:from_url("%20")),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"%20">>)),
@@ -62,6 +62,18 @@ space_char_test_() ->
      ?_assertEqual(<<"+">>, ?q:to_url(<<" ">>, Plus))
     ].
 
+charcase_test_() ->
+    Lower = ?q:make([{charcase, lower}]),
+    Upper = ?q:make([{charcase, upper}]),
+    [%% lowercase is default
+     ?_assertEqual("%af", ?q:to_url([16#AF])),
+     ?_assertEqual(<<"%af">>, ?q:to_url(<<16#AF>>)),
+     %% lowercase specified
+     ?_assertEqual("%af", ?q:to_url([16#AF], Lower)),
+     ?_assertEqual(<<"%af">>, ?q:to_url(<<16#AF>>, Lower)),
+     %% uppercase specified
+     ?_assertEqual("%AF", ?q:to_url([16#AF], Upper)),
+     ?_assertEqual(<<"%AF">>, ?q:to_url(<<16#AF>>, Upper))].
 
 %% Verify that the decoder throws a badarg error if any of the
 %% two characters following a percent-character isn't a valid

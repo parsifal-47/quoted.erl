@@ -23,22 +23,23 @@
 typedef struct {
     bool is_safe_table[256];
     unsigned char unhex_table[256];
-    unsigned char tohex_table[256];
+    unsigned char tohex_lower_table[256];
+    unsigned char tohex_upper_table[256];
 } quoted_priv_data;
 
 
-#define quoted_opt_lowercase 1
+#define quoted_opt_lower 1
 #define quoted_opt_strict 2
 #define quoted_opt_plus 3
 #define quoted_opts_arity 4
 typedef struct {
-    bool lowercase;
+    bool lower;
     bool strict;
     bool plus;
 } quoted_opts_t;
 
 static const quoted_opts_t quoted_opts_defaults = {
-    .lowercase = true,
+    .lower = true,
     .strict = false,
     .plus = false
 };
@@ -52,7 +53,6 @@ typedef enum {
 
 static bool is_safe_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char unhex_tab(const unsigned char c, const quoted_priv_data* data);
-static unsigned char tohex_tab(const unsigned char c, const quoted_priv_data* data);
 static bool read_options(ErlNifEnv* env, ERL_NIF_TERM, quoted_opts_t* opts);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -93,9 +93,13 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     for(i = 'A'; i <= 'F'; i++) { priv->unhex_table[i] = i - 'A' + 10; }
     for(i = 'a'; i <= 'f'; i++) { priv->unhex_table[i] = i - 'a' + 10; }
 
-    memset(priv->tohex_table, false, 256);
-    for(i = 0;  i <= 9;  i++) { priv->tohex_table[i] = '0' + i; }
-    for(i = 10; i <= 16; i++) { priv->tohex_table[i] = 'a' + (i - 10); }
+    memset(priv->tohex_lower_table, false, 256);
+    for(i = 0;  i <= 9;  i++) { priv->tohex_lower_table[i] = '0' + i; }
+    for(i = 10; i <= 16; i++) { priv->tohex_lower_table[i] = 'a' + (i - 10); }
+
+    memset(priv->tohex_upper_table, false, 256);
+    for(i = 0;  i <= 9;  i++) { priv->tohex_upper_table[i] = '0' + i; }
+    for(i = 10; i <= 16; i++) { priv->tohex_upper_table[i] = 'A' + (i - 10); }
 
     *priv_data = priv;
     return EXIT_SUCCESS;
@@ -227,9 +231,14 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
     unsigned char c = 0; // Current character
+    unsigned char* tohex_table = priv->tohex_upper_table;
 
     if(argc == 2 && !read_options(env, argv[1], &opts)) {
         return enif_make_badarg(env);
+    }
+
+    if(opts.lower) {
+        tohex_table = priv->tohex_lower_table;
     }
 
     /* Determine type of input.
@@ -277,8 +286,8 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         }
         else {
             output.data[j++] = '%';
-            output.data[j++] = tohex_tab(c >> 4, priv);
-            output.data[j++] = tohex_tab(c & 0x0F, priv);
+            output.data[j++] = tohex_table[c >> 4];
+            output.data[j++] = tohex_table[c & 0x0F];
         }
         i++;
     }
@@ -307,12 +316,6 @@ unhex_tab(const unsigned char c, const quoted_priv_data* data)
     return data->unhex_table[c];
 }
 
-inline unsigned char
-tohex_tab(const unsigned char c, const quoted_priv_data* data)
-{
-    return data->tohex_table[c];
-}
-
 bool
 read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
 {
@@ -329,12 +332,12 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
         return false;
     }
 
-    /* get #options.lowercase */
-    if(enif_is_identical(elems[quoted_opt_lowercase], true_ATOM)) {
-        opts->lowercase = true;
+    /* get #options.lower */
+    if(enif_is_identical(elems[quoted_opt_lower], true_ATOM)) {
+        opts->lower = true;
     }
-    else if(enif_is_identical(elems[quoted_opt_lowercase], false_ATOM)) {
-        opts->lowercase = false;
+    else if(enif_is_identical(elems[quoted_opt_lower], false_ATOM)) {
+        opts->lower = false;
     }
     else{
         return false;
