@@ -241,6 +241,9 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     ErlNifBinary output;
     ERL_NIF_TERM return_value;
     quoted_input_t input_type = Q_INVALID;
+    unsigned int first_unsafe = 0;
+    unsigned int num_safe = 0;
+    unsigned int num_unsafe = 0;
     unsigned int i = 0; // Position in input
     unsigned int j = 0; // Position in output
     unsigned char c = 0; // Current character
@@ -270,24 +273,32 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     }
 
     while(i < input.size) {
-        c = input.data[i];
-        if(!is_safe_tab(c, priv)) { break; }
+        if(!priv->is_safe_table[input.data[i]]) { break; }
         i++;
     }
+    first_unsafe = i;
+    num_safe = i;
 
     if(i == input.size) {
         return argv[0];
     }
 
+    while(i < input.size) {
+        num_safe += priv->is_safe_table[input.data[i]];
+        i++;
+    }
+    num_unsafe = input.size - num_safe;
+
     /* Allocate an output buffer that is three times larger than the input
      * buffer. We only need to realloc once to shrink the size of the buffer
      * if the input contains no charactes that needs to be quoted.
      */
-    if(!enif_alloc_binary(input.size * 3, &output)) {
+    if(!enif_alloc_binary(num_safe + num_unsafe * 3, &output)) {
         return enif_make_badarg(env);
     }
-    memcpy(output.data, input.data, i);
-    j = i;
+    memcpy(output.data, input.data, first_unsafe);
+    j = first_unsafe;
+    i = first_unsafe;
 
     while(i < input.size) {
         c = input.data[i];
