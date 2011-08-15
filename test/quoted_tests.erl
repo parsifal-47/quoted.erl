@@ -108,10 +108,19 @@ invalid_hex_test_() ->
 %% character is not followed by at least two characters.
 insufficient_hex_test_() ->
     Strict = ?q:make([{strict, true}]),
+    NoStrict = ?q:make([{strict, false}]),
     [%% No characters after % is invalid
+     ?_assertEqual("%", ?q:from_url("%")),
+     ?_assertEqual(<<"%">>, ?q:from_url(<<"%">>)),
+     ?_assertEqual("%", ?q:from_url("%", NoStrict)),
+     ?_assertEqual(<<"%">>, ?q:from_url(<<"%">>, NoStrict)),
      ?_assertError(badarg, ?q:from_url("%", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%">>, Strict)),
      %% One character after % is invalid
+     ?_assertEqual("%A", ?q:from_url("%A")),
+     ?_assertEqual(<<"%A">>, ?q:from_url(<<"%A">>)),
+     ?_assertEqual("%A", ?q:from_url("%A", NoStrict)),
+     ?_assertEqual(<<"%A">>, ?q:from_url(<<"%A">>, NoStrict)),
      ?_assertError(badarg, ?q:from_url("%A", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%A">>, Strict))].
 
