@@ -97,6 +97,10 @@ invalid_hex_test_() ->
      ?_assertError(badarg, ?q:from_url("%jA", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%jA">>, Strict)),
      %% Both characters after % are invalid
+     ?_assertEqual("%ij", ?q:from_url("%ij")),
+     ?_assertEqual(<<"%ij">>, ?q:from_url(<<"%ij">>)),
+     ?_assertEqual("%ij", ?q:from_url("%ij", NoStrict)),
+     ?_assertEqual(<<"%ij">>, ?q:from_url(<<"%ij">>, NoStrict)),
      ?_assertError(badarg, ?q:from_url("%ij", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%ij">>, Strict))].
 
