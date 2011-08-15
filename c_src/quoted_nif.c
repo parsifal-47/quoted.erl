@@ -185,16 +185,28 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     while(i < input.size) {
         c = input.data[i];
         if(c == '%') {
-            if(input.size < i + 3) {
+            bool size_error = input.size < i + 3;
+            if(size_error && opts.strict) {
                 enif_release_binary(&output);
                 return enif_make_badarg(env);
             }
+            else if(size_error) {
+                goto output;
+            }
+
             d = unhex_tab(input.data[++i], priv);
             e = unhex_tab(input.data[++i], priv);
             c = (d << 4) | e;
-            if((d | e) & 0xF0) {
+
+            bool hex_error = (d | e) & 0xF0;
+            if(hex_error && opts.strict) {
                 enif_release_binary(&output);
                 return enif_make_badarg(env);
+            }
+            else if(hex_error) {
+                i--;
+                i--;
+                c = '%';
             }
         }
         else if(c == '+') {
@@ -203,6 +215,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             // but also " "<--"+" for compatibility with things like jQuery.
             c = ' ';
         }
+        output:
         i++;
         output.data[j++] = c;
     }

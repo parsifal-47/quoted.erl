@@ -73,37 +73,52 @@ charcase_test_() ->
      ?_assertEqual(<<"%af">>, ?q:to_url(<<16#AF>>, Lower)),
      %% uppercase specified
      ?_assertEqual("%AF", ?q:to_url([16#AF], Upper)),
-     ?_assertEqual(<<"%AF">>, ?q:to_url(<<16#AF>>, Upper))].
+     ?_assertEqual(<<"%AF">>, ?q:to_url(<<16#AF>>, Upper))
+    ].
+
+strict_test_() ->
+    Strict = ?q:make([{strict, true}]),
+    NoStrict = ?q:make([{strict, false}]),
+    [%% invalid hex characters following %
+     ?_assertEqual("%bg", ?q:from_url("%bg")),
+     ?_assertEqual(<<"%bg">>, ?q:from_url(<<"%bg">>)),
+     ?_assertEqual("%bg", ?q:from_url("%bg", NoStrict)),
+     ?_assertEqual(<<"%bg">>, ?q:from_url(<<"%bg">>, NoStrict)),
+     ?_assertError(badarg, ?q:from_url("%bg", Strict)),
+     ?_assertError(badarg, ?q:from_url(<<"%bg">>, Strict))].
 
 %% Verify that the decoder throws a badarg error if any of the
 %% two characters following a percent-character isn't a valid
 %% hex-character.
 invalid_hex_test_() ->
+    Strict = ?q:make([{strict, true}]),
     [%% Second character after % is invalid
-     ?_assertError(badarg, ?q:from_url("%Aj")),
-     ?_assertError(badarg, ?q:from_url(<<"%Aj">>)),
+     ?_assertError(badarg, ?q:from_url("%Aj", Strict)),
+     ?_assertError(badarg, ?q:from_url(<<"%Aj">>, Strict)),
      %% First character after % is invalid
-     ?_assertError(badarg, ?q:from_url("%jA")),
-     ?_assertError(badarg, ?q:from_url(<<"%jA">>)),
+     ?_assertError(badarg, ?q:from_url("%jA", Strict)),
+     ?_assertError(badarg, ?q:from_url(<<"%jA">>, Strict)),
      %% Both characters after % are invalid
-     ?_assertError(badarg, ?q:from_url("%ij")),
-     ?_assertError(badarg, ?q:from_url(<<"%ij">>))].
+     ?_assertError(badarg, ?q:from_url("%ij", Strict)),
+     ?_assertError(badarg, ?q:from_url(<<"%ij">>, Strict))].
 
 %% Verify that the decoder throws a badarg error if a percent
 %% character is not followed by at least two characters.
 insufficient_hex_test_() ->
+    Strict = ?q:make([{strict, true}]),
     [%% No characters after % is invalid
-     ?_assertError(badarg, ?q:from_url("%")),
-     ?_assertError(badarg, ?q:from_url(<<"%">>)),
+     ?_assertError(badarg, ?q:from_url("%", Strict)),
+     ?_assertError(badarg, ?q:from_url(<<"%">>, Strict)),
      %% One character after % is invalid
-     ?_assertError(badarg, ?q:from_url("%A")),
-     ?_assertError(badarg, ?q:from_url(<<"%A">>))].
+     ?_assertError(badarg, ?q:from_url("%A", Strict)),
+     ?_assertError(badarg, ?q:from_url(<<"%A">>, Strict))].
 
 %% The ?_assertError(badarg, ?q:from_url(<<"%A">>)) assertion
 %% occasionally failed when running the test suite multiple times.
 insufficient_hex_determinstic_test() ->
+    Strict = ?q:make([{strict, true}]),
     Input = fun() -> list_to_binary("%A") end,
-    _ = [?assertError(badarg, ?q:from_url(Input())) || _ <- lists:seq(1, 10000)],
+    _ = [?assertError(badarg, ?q:from_url(Input(), Strict)) || _ <- lists:seq(1, 10000)],
     ok.
 
 

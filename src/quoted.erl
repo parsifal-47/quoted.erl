@@ -141,12 +141,20 @@ from_url_(Bin, Options) when is_binary(Bin) ->
 
 
 -spec unquote_list_to_list([byte()], options()) -> [byte()].
-unquote_list_to_list([$%|HT], _Options) ->
-    [HH,HL|T] = HT,
+unquote_list_to_list([$%|HT=[HH,HL|T]], Options) ->
     H = unhex(HH),
     L = unhex(HL),
-    C = tobyte(H, L),
-    [C|unquote_list_to_list(T, _Options)];
+    case H =:= error orelse L =:= error of
+        true when Options#options.strict ->
+            erlang:error(badarg);
+        true ->
+            [$%|unquote_list_to_list(HT, Options)];
+        false ->
+            C = tobyte(H, L),
+            [C|unquote_list_to_list(T, Options)]
+    end;
+unquote_list_to_list([$%|_], Options) when Options#options.strict ->
+    erlang:error(badarg);
 unquote_list_to_list([AC|T], _Options) when is_integer(AC) ->
     C = from_url_alias(AC),
     [C|unquote_list_to_list(T, _Options)];
@@ -159,12 +167,20 @@ unquote_bin_to_bin(Bin, Options) when is_binary(Bin) ->
     unquote_bin_to_bin(Bin, Options, <<>>).
 
 -spec unquote_bin_to_bin(binary(), options(), binary()) -> binary().
-unquote_bin_to_bin(<<$%,HT/binary>>, _Options, Acc) ->
-    <<HH,HL,T/binary>> = HT,
+unquote_bin_to_bin(<<$%,HH,HL,T/binary>>, Options, Acc) ->
     H = unhex(HH),
     L = unhex(HL),
-    C = tobyte(H, L),
-    unquote_bin_to_bin(T, _Options, <<Acc/binary, C>>);
+    case H =:= error orelse L =:= error of
+        true when Options#options.strict ->
+            erlang:error(badarg);
+        true ->
+            unquote_bin_to_bin(<<HH,HL,T/binary>>, Options, <<Acc/binary, $%>>);
+        false ->
+            C = tobyte(H, L),
+            unquote_bin_to_bin(T, Options, <<Acc/binary, C>>)
+    end;
+unquote_bin_to_bin(<<$%, _/binary>>, Options, _Acc) when Options#options.strict ->
+    erlang:error(badarg);
 unquote_bin_to_bin(<<AC, T/binary>>, _Options, Acc) ->
     C = from_url_alias(AC),
     unquote_bin_to_bin(T, _Options, <<Acc/binary, C>>);
@@ -238,7 +254,7 @@ tohex(C) ->
         15 -> $f
     end.
 
--spec unhex(byte()) -> byte().
+-spec unhex(byte()) -> byte() | error.
 unhex(C) ->
     case C of
         $0 -> 0;
@@ -256,7 +272,8 @@ unhex(C) ->
         $C -> 12; $c -> 12;
         $D -> 13; $d -> 13;
         $E -> 14; $e -> 14;
-        $F -> 15; $f -> 15
+        $F -> 15; $f -> 15;
+        _ -> error
     end.
 
 
