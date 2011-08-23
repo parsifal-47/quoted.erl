@@ -20,6 +20,7 @@
 -include_lib("proper/include/proper.hrl").
 -endif.
 -define(q, quoted).
+-define(REASONABLE_TIMEOUT, 10000). % 10 Seconds
 
 make_test_() ->
     [?_assertMatch(_, ?q:make([])),
@@ -144,15 +145,15 @@ insufficient_hex_determinstic_test() ->
 %% decoding invalid input are released by the NIF and
 %% freed by the erlang runtime system.
 memory_leak_test_() ->
-    {timeout, 10000, ?_test(test_decode_memory_leak)}.
+    {timeout, ?REASONABLE_TIMEOUT, ?_test(test_decode_memory_leak)}.
 
 test_decode_memory_leak() ->
     BinMemBefore = erlang:memory(binary),
     {Pid, MRef} = erlang:spawn_monitor(fun() ->
-        %% Use a binary that is 1MB large and unquote that binary
-        %% 1024 times, this shoud result in a noticable 1GB leak
+        %% Use a binary that is 4KB large and unquote that binary
+        %% 1024 times, this shoud result in a noticable 4MB leak
         %% if a memory leak is occuring.
-        Input = binary:copy(<<"%AI">>, (1024*1024) div 3),
+        Input = binary:copy(<<"%AI">>, (4*1024*1024) div 3),
         _ = [catch quoted:from_url(Input) || _ <- lists:seq(1, 1024)],
         erlang:garbage_collect()
     end),
@@ -238,7 +239,7 @@ prop_list_oracle_encode() ->
         ?q:to_url(Input, Opts) =:= ?q:to_url_(Input, Opts)).
 
 proper_test_() ->
-     {timeout, 5000, ?_assertEqual([], proper:module(?MODULE, [{to_file, user}]))}.
+     {timeout, ?REASONABLE_TIMEOUT, ?_assertEqual([], proper:module(?MODULE, [{to_file, user}]))}.
 
 safe_from_url(Impl, String, Opts) ->
     Result = case Impl of
