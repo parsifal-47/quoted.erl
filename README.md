@@ -10,4 +10,4 @@
     quoted:to_url(binary()) -> binary().
     quoted:to_url([byte()]) -> [byte()].
 
-[![Build Status](http://travis-ci.org/klaar/quoted.erl..png?branch=master)](http://travis-ci.org/klaar/quoted.erl)
+[![Build Status](http://travis-ci.org/klaar/quoted.erl.png?branch=master)](http://travis-ci.org/klaar/quoted.erl)
