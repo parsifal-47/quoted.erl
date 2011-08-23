@@ -1,6 +1,6 @@
-nguage: erlang
+language: erlang
 notifications:
-  disabled: true
+  email: disabled
 env:
   - R14B03
   - R14A
