@@ -143,7 +143,10 @@ insufficient_hex_determinstic_test() ->
 %% Verify that any binaries allocated in the NIF when
 %% decoding invalid input are released by the NIF and
 %% freed by the erlang runtime system.
-decode_memory_leak_test() ->
+memory_leak_test_() ->
+    {timeout, 10000, ?_test(test_decode_memory_leak)}.
+
+test_decode_memory_leak() ->
     BinMemBefore = erlang:memory(binary),
     {Pid, MRef} = erlang:spawn_monitor(fun() ->
         %% Use a binary that is 1MB large and unquote that binary
