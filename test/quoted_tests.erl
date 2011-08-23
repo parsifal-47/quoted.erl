@@ -152,7 +152,7 @@ test_decode_memory_leak() ->
         %% Use a binary that is 1MB large and unquote that binary
         %% 1024 times, this shoud result in a noticable 1GB leak
         %% if a memory leak is occuring.
-        Input = binary:copy(<<"%AI">>, (1024*1024) div 2),
+        Input = binary:copy(<<"%AI">>, (1024*1024) div 3),
         _ = [catch quoted:from_url(Input) || _ <- lists:seq(1, 1024)],
         erlang:garbage_collect()
     end),
