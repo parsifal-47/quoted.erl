@@ -1,0 +1,7 @@
+nguage: erlang
+notifications:
+  disabled: true
+env:
+  - R14B03
+  - R14A
+  - R13B04
