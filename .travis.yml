@@ -3,5 +3,6 @@ notifications:
   email: disabled
 env:
   - R14B03
+  - R14B
   - R14A
   - R13B04
