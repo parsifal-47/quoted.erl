@@ -75,7 +75,7 @@ insufficient_hex_determinstic_test() ->
 %% freed by the erlang runtime system.
 decode_memory_leak_test() ->
     BinMemBefore = erlang:memory(binary),
-    {Pid, MRef} = erlang:spawn_monitor(fun() ->
+    {_Pid, MRef} = erlang:spawn_monitor(fun() ->
         %% Use a binary that is 1MB large and unquote that binary
         %% 1024 times, this shoud result in a noticable 1GB leak
         %% if a memory leak is occuring.
@@ -93,7 +93,7 @@ decode_memory_leak_test() ->
 %% are released by the NIF an freed by the erlang runtime system.
 encode_memory_leak_test() ->
     BinMemBefore = erlang:memory(binary),
-    {Pid, MRef} = erlang:spawn_monitor(fun() ->
+    {_Pid, MRef} = erlang:spawn_monitor(fun() ->
         %% Use a binary that is 1MB large and unquote that binary
         %% 1024 times, this shoud result in a noticable 1GB leak
         %% if a memory leak is occuring.

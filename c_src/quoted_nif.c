@@ -19,9 +19,9 @@
 /* The corresponding erlang functions are implemented
    in the src/quoted.erl file. */
 
-static bool is_hex(unsigned char c);
-static bool is_safe(unsigned char c);
-static unsigned char unhex(unsigned char c);
+inline static bool is_hex(unsigned char c);
+inline static bool is_safe(unsigned char c);
+inline static unsigned char unhex(unsigned char c);
 static unsigned char tohexlower(unsigned char c);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
