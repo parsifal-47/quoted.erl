@@ -235,7 +235,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_binary(env, &output);
     }
     else if(input_type == Q_LIST) {
-        return_value = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
+        return_value = enif_make_string_len(env, (char*)output.data, j, ERL_NIF_LATIN1);
         enif_release_binary(&output);
         return return_value;
     }
@@ -318,7 +318,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_binary(env, &output);
     }
     else if(input_type == Q_LIST) {
-        return_value = enif_make_string_len(env, output.data, j, ERL_NIF_LATIN1);
+        return_value = enif_make_string_len(env, (char*)output.data, j, ERL_NIF_LATIN1);
         enif_release_binary(&output);
         return return_value;
     }
@@ -341,7 +341,7 @@ unhex_tab(const unsigned char c, const quoted_priv_data* data)
 bool
 read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
 {
-    unsigned int arity;
+    int arity;
     const ERL_NIF_TERM* elems;
 
     if(!enif_get_tuple(env, rec, &arity, &elems)) {
