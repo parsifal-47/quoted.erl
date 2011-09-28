@@ -177,12 +177,12 @@ from_url_(Bin, Options) when is_binary(Bin) ->
 unquote_list_to_list([$%|HT=[HH,HL|T]], Options) ->
     H = unhex(HH),
     L = unhex(HL),
-    case H =:= error orelse L =:= error of
-        true when Options#options.strict ->
+    case Options#options.strict of
+        true when H =:= error; L =:= error ->
             erlang:error(badarg);
-        true ->
+        false when H =:= error; L =:= error ->
             [$%|unquote_list_to_list(HT, Options)];
-        false ->
+        _Valid ->
             C = tobyte(H, L),
             [C|unquote_list_to_list(T, Options)]
     end;
@@ -209,12 +209,12 @@ unquote_bin_to_bin(Bin, Options) when is_binary(Bin) ->
 unquote_bin_to_bin(<<$%,HH,HL,T/binary>>, Options, Acc) ->
     H = unhex(HH),
     L = unhex(HL),
-    case H =:= error orelse L =:= error of
-        true when Options#options.strict ->
+    case Options#options.strict of
+        true when H =:= error; L =:= error ->
             erlang:error(badarg);
-        true ->
+        false when  H =:= error; L =:= error ->
             unquote_bin_to_bin(<<HH,HL,T/binary>>, Options, <<Acc/binary, $%>>);
-        false ->
+        _Valid ->
             C = tobyte(H, L),
             unquote_bin_to_bin(T, Options, <<Acc/binary, C>>)
     end;
