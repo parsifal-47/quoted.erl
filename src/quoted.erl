@@ -109,11 +109,13 @@ encode_defaults() ->
 
 %% @private Replace all occurances of 'default' with the default value.
 merge_options(Opts, _Def) when
-Opts#options.lower  =/= default,
-Opts#options.strict =/= default,
-Opts#options.unsafe =/= default,
-Opts#options.plus   =/= default ->
+Opts#options.lower  =/= default, Opts#options.strict =/= default,
+Opts#options.unsafe =/= default, Opts#options.plus   =/= default ->
     Opts;
+merge_options(Opts, Def) when
+Opts#options.lower  =:= default, Opts#options.strict =:= default,
+Opts#options.unsafe =:= default, Opts#options.plus   =:= default ->
+    Def;
 merge_options(Opts, Def) ->
     #options{lower=Lower, strict=Strict, unsafe=Unsafe, plus=Plus} = Opts,
     UseLower  = case Lower  of default -> Def#options.lower;  _ -> Lower end,

@@ -136,10 +136,9 @@ unsafe_input_test_() ->
     ].
 
 plus_test_() ->
-    [?_assertError(badarg,
-        ?q:from_url("+", ?q:make([{plus,false},{unsafe,crash}]))),
-     ?_assertError(badarg,
-        ?q:from_url(<<"+">>, ?q:make([{plus,false},{unsafe,crash}])))
+    Opts = ?q:make([{plus,false},{unsafe,crash}]),
+    [?_assertError(badarg, ?q:from_url("+", Opts)),
+     ?_assertError(badarg, ?q:from_url(<<"+">>, Opts))
     ].
 
 %% The ?_assertError(badarg, ?q:from_url(<<"%A">>)) assertion
