@@ -132,7 +132,15 @@ unsafe_input_test_() ->
      ?_assertEqual("@",     ?q:from_url("@", Keep)),
      ?_assertEqual(<<"@">>, ?q:from_url(<<"@">>, Keep)),
      ?_assertError(badarg,  ?q:from_url("@", Crash)),
-     ?_assertError(badarg,  ?q:from_url(<<"@">>, Crash))].
+     ?_assertError(badarg,  ?q:from_url(<<"@">>, Crash))
+    ].
+
+plus_test_() ->
+    [?_assertError(badarg,
+        ?q:from_url("+", ?q:make([{plus,false},{unsafe,crash}]))),
+     ?_assertError(badarg,
+        ?q:from_url(<<"+">>, ?q:make([{plus,false},{unsafe,crash}])))
+    ].
 
 %% The ?_assertError(badarg, ?q:from_url(<<"%A">>)) assertion
 %% occasionally failed when running the test suite multiple times.
