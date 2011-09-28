@@ -30,19 +30,21 @@ typedef struct {
 
 #define quoted_opt_lower 1
 #define quoted_opt_strict 2
-#define quoted_opt_plus 3
-#define quoted_opts_arity 4
+#define quoted_opt_unsafe 3
+#define quoted_opt_plus 4
+#define quoted_opts_arity 5
 typedef struct {
     bool lower;
     bool strict;
+    bool unsafe;
     bool plus;
 } quoted_opts_t;
 
-static const quoted_opts_t quoted_opts_defaults = {
-    .lower = true,
-    .strict = false,
-    .plus = true
-};
+static const quoted_opts_t quoted_dec_defaults = {
+    .lower = true, .strict = true, .unsafe = true, .plus = true };
+
+static const quoted_opts_t quoted_enc_defaults = {
+    .lower = true, .strict = true, .unsafe = true, .plus = false };
 
 
 typedef enum {
@@ -53,7 +55,7 @@ typedef enum {
 
 static bool is_safe_tab(const unsigned char c, const quoted_priv_data* data);
 static unsigned char unhex_tab(const unsigned char c, const quoted_priv_data* data);
-static bool read_options(ErlNifEnv* env, ERL_NIF_TERM, quoted_opts_t* opts);
+static bool read_options(ErlNifEnv* env, ERL_NIF_TERM, quoted_opts_t* opts, const quoted_opts_t* defaults);
 static ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -65,6 +67,7 @@ static void unload(ErlNifEnv* env, void* priv);
 
 static ERL_NIF_TERM true_ATOM;
 static ERL_NIF_TERM false_ATOM;
+static ERL_NIF_TERM default_ATOM;
 static ERL_NIF_TERM options_ATOM;
 
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
@@ -77,6 +80,7 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     enif_make_existing_atom(env, "true", &true_ATOM,  ERL_NIF_LATIN1);
     enif_make_existing_atom(env, "false", &false_ATOM,  ERL_NIF_LATIN1);
     enif_make_existing_atom(env, "options", &options_ATOM, ERL_NIF_LATIN1);
+    enif_make_existing_atom(env, "default", &default_ATOM, ERL_NIF_LATIN1);
 
     int i = 0;
     memset(priv->is_safe_table, 0, 256*sizeof(int));
@@ -126,7 +130,7 @@ ERL_NIF_TERM unquote_loaded(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
-    quoted_opts_t opts = quoted_opts_defaults;
+    quoted_opts_t opts = quoted_dec_defaults;
     ErlNifBinary input;
     ErlNifBinary output;
     ERL_NIF_TERM return_value;
@@ -139,7 +143,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned char e = 0; // Current character
     const unsigned int* is_safe_table = priv->is_safe_table;
 
-    if(argc == 2 && !read_options(env, argv[1], &opts)) {
+    if(argc == 2 && !read_options(env, argv[1], &opts, &quoted_dec_defaults)) {
         return enif_make_badarg(env);
     }
 
@@ -226,7 +230,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         output.data[j++] = c;
     }
 
-    if(opts.strict && num_safe != j) {
+    if(!opts.unsafe && num_safe != j) {
         enif_release_binary(&output);
         return enif_make_badarg(env);
     }
@@ -247,7 +251,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     quoted_priv_data* priv = (quoted_priv_data*)enif_priv_data(env);
-    quoted_opts_t opts = quoted_opts_defaults;
+    quoted_opts_t opts = quoted_enc_defaults;
     ErlNifBinary input;
     ErlNifBinary output;
     ERL_NIF_TERM return_value;
@@ -258,7 +262,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     unsigned int j = 0; // Position in output
     unsigned char c = 0; // Current character
 
-    if(argc == 2 && !read_options(env, argv[1], &opts)) {
+    if(argc == 2 && !read_options(env, argv[1], &opts, &quoted_enc_defaults)) {
         return enif_make_badarg(env);
     }
     const unsigned char* tohex_table =
@@ -339,7 +343,7 @@ unhex_tab(const unsigned char c, const quoted_priv_data* data)
 }
 
 bool
-read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
+read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts, const quoted_opts_t* def)
 {
     int arity;
     const ERL_NIF_TERM* elems;
@@ -361,6 +365,9 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
     else if(enif_is_identical(elems[quoted_opt_lower], false_ATOM)) {
         opts->lower = false;
     }
+    else if(enif_is_identical(elems[quoted_opt_lower], default_ATOM)) {
+        opts->lower = def->lower;
+    }
     else{
         return false;
     }
@@ -372,9 +379,27 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
     else if(enif_is_identical(elems[quoted_opt_strict], false_ATOM)) {
         opts->strict = false;
     }
-    else{
+    else if(enif_is_identical(elems[quoted_opt_strict], default_ATOM)) {
+        opts->strict = def->strict;
+    }
+    else {
         return false;
     }
+
+    /* get #options.unsafe */
+    if(enif_is_identical(elems[quoted_opt_unsafe], true_ATOM)) {
+        opts->unsafe = true;
+    }
+    else if(enif_is_identical(elems[quoted_opt_unsafe], false_ATOM)) {
+        opts->unsafe = false;
+    }
+    else if(enif_is_identical(elems[quoted_opt_unsafe], default_ATOM)) {
+        opts->unsafe = def->unsafe;
+    }
+    else {
+        return false;
+    }
+
 
     /* get #options.plus */
     if(enif_is_identical(elems[quoted_opt_plus], true_ATOM)) {
@@ -382,6 +407,9 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts)
     }
     else if(enif_is_identical(elems[quoted_opt_plus], false_ATOM)) {
         opts->plus = false;
+    }
+    else if(enif_is_identical(elems[quoted_opt_plus], default_ATOM)) {
+        opts->plus = def->plus;
     }
     else{
         return false;

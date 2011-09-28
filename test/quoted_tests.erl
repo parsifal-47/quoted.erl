@@ -52,7 +52,7 @@ space_char_test_() ->
      ?_assertEqual(" ", ?q:from_url("+", Plus)),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>, Plus)),
      ?_assertEqual("+", ?q:from_url("+", NoPlus)),
-     ?_assertEqual(<<"+">>, ?q:from_url(<<"+">>, NoPlus)),
+     ?_assertError(badarg, ?q:from_url(<<"+">>, NoPlus)),
      %% " " -> "+"
      ?_assertEqual("+", ?q:to_url(" ")),
      ?_assertEqual(<<"+">>, ?q:to_url(<<" ">>)),
@@ -88,8 +88,8 @@ invalid_hex_test_() ->
      ?_assertError(badarg, ?q:from_url("%Aj", Strict)),
      ?_assertError(badarg, ?q:from_url(<<"%Aj">>, Strict)),
      %% First character after % is invalid
-     ?_assertEqual("%jA", ?q:from_url("%jA")),
-     ?_assertEqual(<<"%jA">>, ?q:from_url(<<"%jA">>)),
+     ?_assertError(badarg, ?q:from_url("%jA")),
+     ?_assertError(badarg, ?q:from_url(<<"%jA">>)),
      ?_assertEqual("%jA", ?q:from_url("%jA", NoStrict)),
      ?_assertEqual(<<"%jA">>, ?q:from_url(<<"%jA">>, NoStrict)),
      ?_assertError(badarg, ?q:from_url("%jA", Strict)),

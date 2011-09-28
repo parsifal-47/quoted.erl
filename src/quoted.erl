@@ -27,18 +27,23 @@
 -export([to_url_/1, from_url_/1, to_url_/2, from_url_/2]).
 -export([is_native/0]).
 
+%% macros
+-define(print(Arg), (begin io:format("~p~n", [Arg]), Arg end)).
 
 
 -type data() :: [byte()] | binary().
 -type option()
-   :: {lower, boolean()}
+   :: {charcase, lower | upper}
+    | {unsafe, keep | crash}
     | {strict, boolean()}
     | {plus, boolean()}.
 
 -record(options, {
-    lower :: boolean(),
-    strict :: boolean(),
-    plus :: boolean()}).
+    lower  = default :: boolean(),
+    strict = default :: boolean(),
+    unsafe = default :: boolean(),
+    plus   = default :: boolean()}).
+
 -opaque options() :: #options{}.
 -export_type([options/0]).
 
@@ -66,30 +71,56 @@ is_native() -> false.
 %% @end
 -spec make([option()]) -> options().
 make(OptionsList) ->
-    Default = defaults(),
     Lower = case lists:keyfind(charcase, 1, OptionsList) of
         {charcase, lower} -> true;
         {charcase, upper} -> false;
-        false -> Default#options.lower;
+        false -> default;
         _ -> erlang:error(badarg)
     end,
     Strict = case lists:keyfind(strict, 1, OptionsList) of
         {strict, true} -> true;
         {strict, false} -> false;
-        false -> Default#options.strict;
+        false -> default;
         _ -> erlang:error(badarg)
     end,
     Plus = case lists:keyfind(plus, 1, OptionsList) of
         {plus, true} -> true;
         {plus, false} -> false;
-        false -> Default#options.plus;
+        false -> default;
         _ -> erlang:error(badarg)
     end,
-    #options{lower=Lower, strict=Strict, plus=Plus}.
+    Unsafe = case lists:keyfind(unsafe, 1, OptionsList) of
+        {unsafe, keep} -> true;
+        {unsafe, crash} -> false;
+        false -> default;
+        _ -> erlang:error(badarg)
+    end,
+    #options{lower=Lower, strict=Strict, unsafe=Unsafe, plus=Plus}.
 
-%% @private Return the default options.
-defaults() ->
-    #options{lower=true, strict=false, plus=true}.
+
+%% @private Return the default decoding options.
+decode_defaults() ->
+    #options{lower=true, strict=true, unsafe=true, plus=true}.
+
+
+%% @private Return the default encoding options.
+encode_defaults() ->
+    #options{lower=true, strict=true, unsafe=true, plus=false}.
+
+%% @private Replace all occurances of 'default' with the default value.
+merge_options(Opts, _Def) when
+Opts#options.lower  =/= default,
+Opts#options.strict =/= default,
+Opts#options.unsafe =/= default,
+Opts#options.plus   =/= default ->
+    Opts;
+merge_options(Opts, Def) ->
+    #options{lower=Lower, strict=Strict, unsafe=Unsafe, plus=Plus} = Opts,
+    UseLower  = case Lower  of default -> Def#options.lower;  _ -> Lower end,
+    UseStrict = case Strict of default -> Def#options.strict; _ -> Strict end,
+    UseUnsafe = case Unsafe of default -> Def#options.unsafe; _ -> Unsafe end,
+    UsePlus   = case Plus   of default -> Def#options.plus;   _ -> Plus end,
+    #options{lower=UseLower, strict=UseStrict, unsafe=UseUnsafe, plus=UsePlus}.
 
 
 %% @doc
@@ -100,7 +131,7 @@ to_url(Data) ->
 
 
 to_url_(Data) ->
-    to_url_(Data, defaults()).
+    to_url_(Data, encode_defaults()).
 
 
 %% @doc
@@ -111,9 +142,9 @@ to_url(Data, Options) ->
 
 
 to_url_(Str, Options) when is_list(Str) ->
-    quote_list_to_list(Str, Options);
+    quote_list_to_list(Str, merge_options(Options, encode_defaults()));
 to_url_(Bin, Options) when is_binary(Bin) ->
-    quote_bin_to_bin(Bin, Options).
+    quote_bin_to_bin(Bin, merge_options(Options, encode_defaults())).
 
 
 %% @doc
@@ -124,7 +155,7 @@ from_url(Data) ->
 
 
 from_url_(Data) ->
-    from_url_(Data, defaults()).
+    from_url_(Data, decode_defaults()).
 
 
 %% @doc
@@ -135,9 +166,9 @@ from_url(Data, Options) ->
 
 
 from_url_(Str, Options) when is_list(Str) ->
-    unquote_list_to_list(Str, Options);
+    unquote_list_to_list(Str, merge_options(Options, decode_defaults()));
 from_url_(Bin, Options) when is_binary(Bin) ->
-    unquote_bin_to_bin(Bin, Options).
+    unquote_bin_to_bin(Bin, merge_options(Options, decode_defaults())).
 
 
 -spec unquote_list_to_list([byte()], options()) -> [byte()].
@@ -157,13 +188,13 @@ unquote_list_to_list([$%|_], Options) when Options#options.strict ->
     erlang:error(badarg);
 unquote_list_to_list([$+|T], Options) when Options#options.plus ->
     [$ |unquote_list_to_list(T, Options)];
-unquote_list_to_list([C|T], Options) when Options#options.strict ->
+unquote_list_to_list([C|T], Options) when Options#options.unsafe ->
+    [C|unquote_list_to_list(T, Options)];
+unquote_list_to_list([C|T], Options) ->
     case is_url_safe(C) of
         false -> erlang:error(badarg);
         true -> [C|unquote_list_to_list(T, Options)]
     end;
-unquote_list_to_list([C|T], Options) ->
-    [C|unquote_list_to_list(T, Options)];
 unquote_list_to_list([], _Options) ->
     [].
 
@@ -189,14 +220,13 @@ unquote_bin_to_bin(<<$%, _/binary>>, Options, _Acc) when Options#options.strict 
     erlang:error(badarg);
 unquote_bin_to_bin(<<$+, T/binary>>, Options, Acc) when Options#options.plus ->
     unquote_bin_to_bin(T, Options, <<Acc/binary, $ >>);
-
-unquote_bin_to_bin(<<C, T/binary>>, Options, Acc) when Options#options.strict ->
+unquote_bin_to_bin(<<C, T/binary>>, Options, Acc) when Options#options.unsafe ->
+    unquote_bin_to_bin(T, Options, <<Acc/binary, C>>);
+unquote_bin_to_bin(<<C, T/binary>>, Options, Acc) ->
     case is_url_safe(C) of
         false -> erlang:error(badarg);
         true -> unquote_bin_to_bin(T, Options, <<Acc/binary, C>>)
     end;
-unquote_bin_to_bin(<<C, T/binary>>, _Options, Acc) ->
-    unquote_bin_to_bin(T, _Options, <<Acc/binary, C>>);
 unquote_bin_to_bin(<<>>, _Options, Acc) ->
     Acc.
 
@@ -204,14 +234,14 @@ unquote_bin_to_bin(<<>>, _Options, Acc) ->
 -spec quote_list_to_list([byte()], options()) -> [byte()].
 quote_list_to_list([$ |T], Options) when Options#options.plus ->
     [$+|quote_list_to_list(T, Options)];
-quote_list_to_list([AC|T], _Options) ->
+quote_list_to_list([AC|T], Options) ->
     case is_url_safe(AC) of
         true ->
-            [AC|quote_list_to_list(T, _Options)];
+            [AC|quote_list_to_list(T, Options)];
         false ->
-            H = tohex(highbits(AC)),
-            L = tohex(lowbits(AC)),
-            [$%,H,L|quote_list_to_list(T, _Options)]
+            H = tohex(highbits(AC), Options),
+            L = tohex(lowbits(AC), Options),
+            [$%,H,L|quote_list_to_list(T, Options)]
     end;
 quote_list_to_list([], _Options) ->
     [].
@@ -224,14 +254,14 @@ quote_bin_to_bin(Bin, _Options) when is_binary(Bin) ->
 -spec quote_bin_to_bin(binary(), options(), binary()) -> binary().
 quote_bin_to_bin(<<$ , T/binary>>, Options, Acc) when Options#options.plus ->
     quote_bin_to_bin(T, Options, <<Acc/binary, $+>>);
-quote_bin_to_bin(<<AC, T/binary>>, _Options, Acc) ->
+quote_bin_to_bin(<<AC, T/binary>>, Options, Acc) ->
     case is_url_safe(AC) of
         true ->
-            quote_bin_to_bin(T, _Options, <<Acc/binary, AC>>);
+            quote_bin_to_bin(T, Options, <<Acc/binary, AC>>);
         false ->
-            H = tohex(highbits(AC)),
-            L = tohex(lowbits(AC)),
-            quote_bin_to_bin(T, _Options, <<Acc/binary, $%, H, L>>)
+            H = tohex(highbits(AC), Options),
+            L = tohex(lowbits(AC), Options),
+            quote_bin_to_bin(T, Options, <<Acc/binary, $%, H, L>>)
     end;
 quote_bin_to_bin(<<>>, _Options, Acc) ->
     Acc.
@@ -246,8 +276,8 @@ lowbits(I)  -> I band 16#0F.
 -spec tobyte(byte(), byte()) -> byte().
 tobyte(H, L) -> L bor (H bsl 4).
 
--spec tohex(byte()) -> byte().
-tohex(C) ->
+-spec tohex(byte(), options()) -> byte().
+tohex(C, Options) ->
     case C of
         0  -> $0;
         1  -> $1;
@@ -259,12 +289,24 @@ tohex(C) ->
         7  -> $7;
         8  -> $8;
         9  -> $9;
-        10 -> $a;
-        11 -> $b;
-        12 -> $c;
-        13 -> $d;
-        14 -> $e;
-        15 -> $f
+        _ when Options#options.lower ->
+            case C of
+                10 -> $a;
+                11 -> $b;
+                12 -> $c;
+                13 -> $d;
+                14 -> $e;
+                15 -> $f
+            end;
+        _ when not Options#options.lower ->
+            case C of
+                10 -> $A;
+                11 -> $B;
+                12 -> $C;
+                13 -> $D;
+                14 -> $E;
+                15 -> $F
+            end
     end.
 
 -spec unhex(byte()) -> byte() | error.
