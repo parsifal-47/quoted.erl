@@ -43,20 +43,21 @@ make_test_() ->
 space_char_test_() ->
     Plus = ?q:make([{plus, true}]),
     NoPlus = ?q:make([{plus, false}]),
-    [%% " " ->  "%20"
-     ?_assertEqual(" ", ?q:from_url("%20", NoPlus)),
+    [%% "%20" ->  " "
+     ?_assertEqual(" ",     ?q:from_url("%20", NoPlus)),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"%20">>, NoPlus)),
      %% "+" -> " "
-     ?_assertEqual(" ", ?q:from_url("+")),
+     ?_assertEqual(" ",     ?q:from_url("+")),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>)),
-     ?_assertEqual(" ", ?q:from_url("+", Plus)),
+     ?_assertEqual(" ",     ?q:from_url("+", Plus)),
      ?_assertEqual(<<" ">>, ?q:from_url(<<"+">>, Plus)),
-     ?_assertEqual("+", ?q:from_url("+", NoPlus)),
-     ?_assertError(badarg, ?q:from_url(<<"+">>, NoPlus)),
+     ?_assertEqual("+",     ?q:from_url("+", NoPlus)),
+     ?_assertEqual(<<"+">>, ?q:from_url(<<"+">>, NoPlus)),
+     %% " " -> "%20"
+     ?_assertEqual("%20",     ?q:to_url(" ")),
+     ?_assertEqual(<<"%20">>, ?q:to_url(<<" ">>)),
      %% " " -> "+"
-     ?_assertEqual("+", ?q:to_url(" ")),
-     ?_assertEqual(<<"+">>, ?q:to_url(<<" ">>)),
-     ?_assertEqual("+", ?q:to_url(" ", Plus)),
+     ?_assertEqual("+",     ?q:to_url(" ", Plus)),
      ?_assertEqual(<<"+">>, ?q:to_url(<<" ">>, Plus))
     ].
 
@@ -64,13 +65,13 @@ charcase_test_() ->
     Lower = ?q:make([{charcase, lower}]),
     Upper = ?q:make([{charcase, upper}]),
     [%% lowercase is default
-     ?_assertEqual("%af", ?q:to_url([16#AF])),
+     ?_assertEqual("%af",     ?q:to_url([16#AF])),
      ?_assertEqual(<<"%af">>, ?q:to_url(<<16#AF>>)),
      %% lowercase specified
-     ?_assertEqual("%af", ?q:to_url([16#AF], Lower)),
+     ?_assertEqual("%af",     ?q:to_url([16#AF], Lower)),
      ?_assertEqual(<<"%af">>, ?q:to_url(<<16#AF>>, Lower)),
      %% uppercase specified
-     ?_assertEqual("%AF", ?q:to_url([16#AF], Upper)),
+     ?_assertEqual("%AF",     ?q:to_url([16#AF], Upper)),
      ?_assertEqual(<<"%AF">>, ?q:to_url(<<16#AF>>, Upper))
     ].
 
@@ -81,26 +82,26 @@ invalid_hex_test_() ->
     Strict = ?q:make([{strict, true}]),
     NoStrict = ?q:make([{strict, false}]),
     [%% Second character after % is invalid
-     ?_assertEqual("%Aj", ?q:from_url("%Aj")),
-     ?_assertEqual(<<"%Aj">>, ?q:from_url(<<"%Aj">>)),
-     ?_assertEqual("%Aj", ?q:from_url("%Aj", NoStrict)),
+     ?_assertError(badarg,    ?q:from_url("%Aj")),
+     ?_assertError(badarg,    ?q:from_url(<<"%Aj">>)),
+     ?_assertError(badarg,    ?q:from_url("%Aj", Strict)),
+     ?_assertError(badarg,    ?q:from_url(<<"%Aj">>, Strict)),
+     ?_assertEqual("%Aj",     ?q:from_url("%Aj", NoStrict)),
      ?_assertEqual(<<"%Aj">>, ?q:from_url(<<"%Aj">>, NoStrict)),
-     ?_assertError(badarg, ?q:from_url("%Aj", Strict)),
-     ?_assertError(badarg, ?q:from_url(<<"%Aj">>, Strict)),
      %% First character after % is invalid
-     ?_assertError(badarg, ?q:from_url("%jA")),
-     ?_assertError(badarg, ?q:from_url(<<"%jA">>)),
-     ?_assertEqual("%jA", ?q:from_url("%jA", NoStrict)),
+     ?_assertError(badarg,    ?q:from_url("%jA")),
+     ?_assertError(badarg,    ?q:from_url(<<"%jA">>)),
+     ?_assertEqual("%jA",     ?q:from_url("%jA", NoStrict)),
      ?_assertEqual(<<"%jA">>, ?q:from_url(<<"%jA">>, NoStrict)),
-     ?_assertError(badarg, ?q:from_url("%jA", Strict)),
-     ?_assertError(badarg, ?q:from_url(<<"%jA">>, Strict)),
-     %% Both characters after % are invalid
-     ?_assertEqual("%ij", ?q:from_url("%ij")),
-     ?_assertEqual(<<"%ij">>, ?q:from_url(<<"%ij">>)),
-     ?_assertEqual("%ij", ?q:from_url("%ij", NoStrict)),
-     ?_assertEqual(<<"%ij">>, ?q:from_url(<<"%ij">>, NoStrict)),
-     ?_assertError(badarg, ?q:from_url("%ij", Strict)),
-     ?_assertError(badarg, ?q:from_url(<<"%ij">>, Strict))].
+     ?_assertError(badarg,    ?q:from_url("%jA", Strict)),
+     ?_assertError(badarg,    ?q:from_url(<<"%jA">>, Strict)),
+     ?_assertError(badarg,    ?q:from_url("%ij")),
+     ?_assertError(badarg,    ?q:from_url(<<"%ij">>)),
+     ?_assertError(badarg,    ?q:from_url("%ij", Strict)),
+     ?_assertError(badarg,    ?q:from_url(<<"%ij">>, Strict)),
+     ?_assertEqual("%ij",     ?q:from_url("%ij", NoStrict)),
+     ?_assertEqual(<<"%ij">>, ?q:from_url(<<"%ij">>, NoStrict))
+    ].
 
 %% Verify that the decoder throws a badarg error if a percent
 %% character is not followed by at least two characters.
@@ -108,29 +109,30 @@ insufficient_hex_test_() ->
     Strict = ?q:make([{strict, true}]),
     NoStrict = ?q:make([{strict, false}]),
     [%% No characters after % is invalid
-     ?_assertEqual("%", ?q:from_url("%")),
-     ?_assertEqual(<<"%">>, ?q:from_url(<<"%">>)),
-     ?_assertEqual("%", ?q:from_url("%", NoStrict)),
+     ?_assertError(badarg,  ?q:from_url("%")),
+     ?_assertError(badarg,  ?q:from_url(<<"%">>)),
+     ?_assertError(badarg,  ?q:from_url("%", Strict)),
+     ?_assertError(badarg,  ?q:from_url(<<"%">>, Strict)),
+     ?_assertEqual("%",     ?q:from_url("%", NoStrict)),
      ?_assertEqual(<<"%">>, ?q:from_url(<<"%">>, NoStrict)),
-     ?_assertError(badarg, ?q:from_url("%", Strict)),
-     ?_assertError(badarg, ?q:from_url(<<"%">>, Strict)),
      %% One character after % is invalid
-     ?_assertEqual("%A", ?q:from_url("%A")),
-     ?_assertEqual(<<"%A">>, ?q:from_url(<<"%A">>)),
-     ?_assertEqual("%A", ?q:from_url("%A", NoStrict)),
-     ?_assertEqual(<<"%A">>, ?q:from_url(<<"%A">>, NoStrict)),
-     ?_assertError(badarg, ?q:from_url("%A", Strict)),
-     ?_assertError(badarg, ?q:from_url(<<"%A">>, Strict))].
+     ?_assertError(badarg,   ?q:from_url("%A")),
+     ?_assertError(badarg,   ?q:from_url(<<"%A">>)),
+     ?_assertError(badarg,   ?q:from_url("%A", Strict)),
+     ?_assertError(badarg,   ?q:from_url(<<"%A">>, Strict)),
+     ?_assertEqual("%A",     ?q:from_url("%A", NoStrict)),
+     ?_assertEqual(<<"%A">>, ?q:from_url(<<"%A">>, NoStrict))
+    ].
 
 unsafe_input_test_() ->
-    Strict = ?q:make([{strict, true}]),
-    NoStrict = ?q:make([{strict, false}]),
-    [?_assertEqual("@", ?q:from_url("@")),
+    Keep = ?q:make([{unsafe, keep}]),
+    Crash = ?q:make([{unsafe, crash}]),
+    [?_assertEqual("@",     ?q:from_url("@")),
      ?_assertEqual(<<"@">>, ?q:from_url(<<"@">>)),
-     ?_assertEqual("@", ?q:from_url("@", NoStrict)),
-     ?_assertEqual(<<"@">>, ?q:from_url(<<"@">>, NoStrict)),
-     ?_assertError(badarg, ?q:from_url("@", Strict)),
-     ?_assertError(badarg, ?q:from_url(<<"@">>, Strict))].
+     ?_assertEqual("@",     ?q:from_url("@", Keep)),
+     ?_assertEqual(<<"@">>, ?q:from_url(<<"@">>, Keep)),
+     ?_assertError(badarg,  ?q:from_url("@", Crash)),
+     ?_assertError(badarg,  ?q:from_url(<<"@">>, Crash))].
 
 %% The ?_assertError(badarg, ?q:from_url(<<"%A">>)) assertion
 %% occasionally failed when running the test suite multiple times.
@@ -151,6 +153,7 @@ test_decode_memory_leak() ->
     BinMemBefore = erlang:memory(binary),
     {Pid, MRef} = erlang:spawn_monitor(fun() ->
         %% Use a binary that is 4KB large and unquote that binary
+
         %% 1024 times, this shoud result in a noticable 4MB leak
         %% if a memory leak is occuring.
         Input = binary:copy(<<"%AI">>, (4*1024*1024) div 3),
@@ -211,7 +214,7 @@ prop_list_inv() ->
     begin
         Quoted = ?q:to_url(Input, Opts),
         Unquoted = ?q:from_url(Quoted, Opts),
-        Unquoted == Input
+        Unquoted =:= Input
     end).
 
 prop_bin_inv() ->
@@ -219,7 +222,7 @@ prop_bin_inv() ->
     begin
         Quoted = ?q:to_url(Input, Opts),
         Unquoted = ?q:from_url(Quoted, Opts),
-        Unquoted == Input
+        Unquoted =:= Input
     end).
 
 prop_bin_oracle_decode() ->
