@@ -39,6 +39,10 @@ extern "C" {
 #define enif_cond_broadcast erl_drv_cond_broadcast
 #define enif_cond_wait erl_drv_cond_wait
 #define ErlNifCond ErlDrvCond
+
+#define enif_make_existing_atom_compat(E, S, T, C) \
+    enif_make_existing_atom(E, S, T)
+
 #endif /* R13B04 */
 
 #if ERL_NIF_MAJOR_VERSION == 2 && ERL_NIF_MINOR_VERSION >= 0
