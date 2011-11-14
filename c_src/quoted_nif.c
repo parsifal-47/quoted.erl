@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "erl_nif.h"
+#include "erl_nif_compat.h"
 #include "stdbool.h"
 #include "string.h"
 /* The corresponding erlang functions are implemented
