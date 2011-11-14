@@ -72,15 +72,15 @@ static ERL_NIF_TERM options_ATOM;
 
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
-    quoted_priv_data* priv = enif_alloc(sizeof(quoted_priv_data));
+    quoted_priv_data* priv = enif_alloc_compat(env, sizeof(quoted_priv_data));
     if(priv == NULL) {
         return EXIT_FAILURE;
     }
 
-    enif_make_existing_atom(env, "true", &true_ATOM,  ERL_NIF_LATIN1);
-    enif_make_existing_atom(env, "false", &false_ATOM,  ERL_NIF_LATIN1);
-    enif_make_existing_atom(env, "options", &options_ATOM, ERL_NIF_LATIN1);
-    enif_make_existing_atom(env, "default", &default_ATOM, ERL_NIF_LATIN1);
+    enif_make_existing_atom_compat(env, "true", &true_ATOM,  ERL_NIF_LATIN1);
+    enif_make_existing_atom_compat(env, "false", &false_ATOM,  ERL_NIF_LATIN1);
+    enif_make_existing_atom_compat(env, "options", &options_ATOM, ERL_NIF_LATIN1);
+    enif_make_existing_atom_compat(env, "default", &default_ATOM, ERL_NIF_LATIN1);
 
     int i = 0;
     memset(priv->is_safe_table, 0, 256*sizeof(int));
@@ -118,7 +118,7 @@ static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM lo
 }
 
 static void unload(ErlNifEnv* env, void* priv) {
-    enif_free(priv);
+    enif_free_compat(env, priv);
     return;
 }
 
