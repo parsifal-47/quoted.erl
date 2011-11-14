@@ -151,13 +151,11 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      * The input format also determines the output format. The caller
      * expects the output to be of the same type as the input format.
      */
-    if(enif_is_list(env, argv[0])
-            && enif_inspect_iolist_as_binary(env, argv[0], &input)) {
-        input_type = Q_LIST;
-    }
-    else if(enif_is_binary(env, argv[0])
-            && enif_inspect_binary(env, argv[0], &input)) {
+    if(enif_inspect_binary(env, argv[0], &input)) {
         input_type = Q_BINARY;
+    }
+    else if(enif_inspect_iolist_as_binary(env, argv[0], &input)) {
+        input_type = Q_LIST;
     }
     if(input_type == Q_INVALID) {
         return enif_make_badarg(env);
@@ -272,13 +270,11 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     /* Determine type of input.
      * See comment on output format in unquote_iolist(...)
      */
-    if(enif_is_list(env, argv[0])
-            && enif_inspect_iolist_as_binary(env, argv[0], &input)) {
-        input_type = Q_LIST;
-    }
-    else if(enif_is_binary(env, argv[0])
-            && enif_inspect_binary(env, argv[0], &input)) {
+    if(enif_inspect_binary(env, argv[0], &input)) {
         input_type = Q_BINARY;
+    }
+    else if(enif_inspect_iolist_as_binary(env, argv[0], &input)) {
+        input_type = Q_LIST;
     }
     if(input_type == Q_INVALID) {
         return enif_make_badarg(env);
