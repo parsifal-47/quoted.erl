@@ -355,18 +355,18 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts, const quoted
     if(arity != quoted_opts_arity) {
         return false;
     }
-    if(!enif_is_identical(elems[0], options_ATOM)) {
+    if(!enif_is_identical_compat(env, elems[0], options_ATOM)) {
         return false;
     }
 
     /* get #options.lower */
-    if(enif_is_identical(elems[quoted_opt_lower], true_ATOM)) {
+    if(enif_is_identical_compat(env, elems[quoted_opt_lower], true_ATOM)) {
         opts->lower = true;
     }
-    else if(enif_is_identical(elems[quoted_opt_lower], false_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_lower], false_ATOM)) {
         opts->lower = false;
     }
-    else if(enif_is_identical(elems[quoted_opt_lower], default_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_lower], default_ATOM)) {
         opts->lower = def->lower;
     }
     else{
@@ -374,13 +374,13 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts, const quoted
     }
 
     /* get #options.strict */
-    if(enif_is_identical(elems[quoted_opt_strict], true_ATOM)) {
+    if(enif_is_identical_compat(env, elems[quoted_opt_strict], true_ATOM)) {
         opts->strict = true;
     }
-    else if(enif_is_identical(elems[quoted_opt_strict], false_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_strict], false_ATOM)) {
         opts->strict = false;
     }
-    else if(enif_is_identical(elems[quoted_opt_strict], default_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_strict], default_ATOM)) {
         opts->strict = def->strict;
     }
     else {
@@ -388,13 +388,13 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts, const quoted
     }
 
     /* get #options.unsafe */
-    if(enif_is_identical(elems[quoted_opt_unsafe], true_ATOM)) {
+    if(enif_is_identical_compat(env, elems[quoted_opt_unsafe], true_ATOM)) {
         opts->unsafe = true;
     }
-    else if(enif_is_identical(elems[quoted_opt_unsafe], false_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_unsafe], false_ATOM)) {
         opts->unsafe = false;
     }
-    else if(enif_is_identical(elems[quoted_opt_unsafe], default_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_unsafe], default_ATOM)) {
         opts->unsafe = def->unsafe;
     }
     else {
@@ -403,13 +403,13 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts, const quoted
 
 
     /* get #options.plus */
-    if(enif_is_identical(elems[quoted_opt_plus], true_ATOM)) {
+    if(enif_is_identical_compat(env, elems[quoted_opt_plus], true_ATOM)) {
         opts->plus = true;
     }
-    else if(enif_is_identical(elems[quoted_opt_plus], false_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_plus], false_ATOM)) {
         opts->plus = false;
     }
-    else if(enif_is_identical(elems[quoted_opt_plus], default_ATOM)) {
+    else if(enif_is_identical_compat(env, elems[quoted_opt_plus], default_ATOM)) {
         opts->plus = def->plus;
     }
     else{
