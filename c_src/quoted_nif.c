@@ -177,7 +177,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      * the size of the buffer if the input buffer contains quoted
      * characters.
      */
-    if(!enif_alloc_binary(input.size, &output)) {
+    if(!enif_alloc_binary_compat(env, input.size, &output)) {
         return enif_make_badarg(env);
     }
 
@@ -186,7 +186,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         if(c == '%') {
             bool size_error = input.size < i + 3;
             if(size_error && opts.strict) {
-                enif_release_binary(&output);
+                enif_release_binary_compat(env, &output);
                 return enif_make_badarg(env);
             }
             else if(size_error) {
@@ -200,7 +200,7 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
             bool hex_error = (d | e) & 0xF0;
             if(hex_error && opts.strict) {
-                enif_release_binary(&output);
+                enif_release_binary_compat(env, &output);
                 return enif_make_badarg(env);
             }
             else if(hex_error) {
@@ -229,19 +229,19 @@ ERL_NIF_TERM unquote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     }
 
     if(!opts.unsafe && num_safe != j) {
-        enif_release_binary(&output);
+        enif_release_binary_compat(env, &output);
         return enif_make_badarg(env);
     }
 
-    if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
+    if(input_type == Q_BINARY && enif_realloc_binary_compat(env, &output, j)) {
         return enif_make_binary(env, &output);
     }
     else if(input_type == Q_LIST) {
         return_value = enif_make_string_len(env, (char*)output.data, j, ERL_NIF_LATIN1);
-        enif_release_binary(&output);
+        enif_release_binary_compat(env, &output);
         return return_value;
     }
-    enif_release_binary(&output);
+    enif_release_binary_compat(env, &output);
     return enif_make_badarg(env);
 }
 
@@ -294,7 +294,7 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      * The binary should be reallocated to compensate for spaces that
      * were encoded as '+' if the plus option was enabled.
      */
-    if(!enif_alloc_binary(num_safe + (num_unsafe * 3), &output)) {
+    if(!enif_alloc_binary_compat(env, num_safe + (num_unsafe * 3), &output)) {
         return enif_make_badarg(env);
     }
 
@@ -314,15 +314,15 @@ ERL_NIF_TERM quote_iolist(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         i++;
     }
 
-    if(input_type == Q_BINARY && enif_realloc_binary(&output, j)) {
+    if(input_type == Q_BINARY && enif_realloc_binary_compat(env, &output, j)) {
         return enif_make_binary(env, &output);
     }
     else if(input_type == Q_LIST) {
         return_value = enif_make_string_len(env, (char*)output.data, j, ERL_NIF_LATIN1);
-        enif_release_binary(&output);
+        enif_release_binary_compat(env, &output);
         return return_value;
     }
-    enif_release_binary(&output);
+    enif_release_binary_compat(env, &output);
     return enif_make_badarg(env);
 }
 

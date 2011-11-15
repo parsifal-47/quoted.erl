@@ -30,6 +30,8 @@ extern "C" {
 #define enif_alloc_resource_compat enif_alloc_resource
 #define enif_release_resource_compat enif_release_resource
 #define enif_alloc_binary_compat enif_alloc_binary
+#define enif_realloc_binary_compat enif_realloc_binary
+#define enif_release_binary_compat enif_release_binary
 #define enif_alloc_compat enif_alloc
 #define enif_realloc_compat enif_realloc
 #define enif_free_compat enif_free
@@ -58,6 +60,12 @@ extern "C" {
 
 #define enif_alloc_binary_compat(E, S, B) \
     enif_alloc_binary(S, B)
+
+#define enif_realloc_binary_compat(E, B, S) \
+    enif_realloc_binary(B, S)
+
+#define enif_release_binary_compat(E, B) \
+    enif_release_binary(B)
 
 #define enif_alloc_compat(E, S) \
     enif_alloc(S)
