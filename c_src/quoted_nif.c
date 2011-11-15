@@ -65,6 +65,11 @@ static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info);
 static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM load_info);
 static void unload(ErlNifEnv* env, void* priv);
 
+#if ERL_NIF_MAJOR_VERSION == 1 && ERL_NIF_MINOR_VERSION == 0
+static ERL_NIF_TERM enif_make_string_len_compat(ErlNifEnv* env,
+    const char* string, size_t len, ErlNifCharEncoding encoding);
+#endif
+
 static ERL_NIF_TERM true_ATOM;
 static ERL_NIF_TERM false_ATOM;
 static ERL_NIF_TERM default_ATOM;
@@ -413,6 +418,22 @@ read_options(ErlNifEnv* env, ERL_NIF_TERM rec, quoted_opts_t* opts, const quoted
     return true;
 }
 
+#if ERL_NIF_MAJOR_VERSION == 1 && ERL_NIF_MINOR_VERSION == 0
+static ERL_NIF_TERM
+enif_make_string_len_compat(ErlNifEnv* env,
+        const char* string, size_t len, ErlNifCharEncoding encoding)
+{
+    ERL_NIF_TERM tail = enif_make_list(env, 0);
+    ERL_NIF_TERM head;
+    int i;
+    for(i = len - 1; i >= 0; i--) {
+        head = enif_make_int(env, string[i]);
+        tail = enif_make_list_cell(env, head, tail);
+    }
+    return tail;
+}
+
+#endif
 
 static ErlNifFunc nif_funcs[] = {
     {"is_native", 0, unquote_loaded},

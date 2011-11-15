@@ -45,6 +45,11 @@ extern "C" {
 #define enif_make_existing_atom_compat(E, S, T, C) \
     enif_make_existing_atom(E, S, T)
 
+#define enif_make_string_len(E, A, S, C) \
+    enif_make_string_len_compat(E, A, S, C)
+
+#define enif_is_identical_compat enif_is_identical
+
 #endif /* R13B04 */
 
 #if ERL_NIF_MAJOR_VERSION == 2 && ERL_NIF_MINOR_VERSION >= 0
@@ -76,8 +81,10 @@ extern "C" {
 #define enif_free_compat(E, P) \
     enif_free(P)
 
-#endif /* R14 */
+#define enif_is_identical_compat(E, L, R) \
+    enif_is_identical(L, R)
 
+#endif /* R14 */
 
 
 #ifdef __cplusplus
