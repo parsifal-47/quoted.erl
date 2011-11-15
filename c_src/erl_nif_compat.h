@@ -84,6 +84,8 @@ extern "C" {
 #define enif_is_identical_compat(E, L, R) \
     enif_is_identical(L, R)
 
+#define enif_make_existing_atom_compat enif_make_existing_atom
+
 #endif /* R14 */
 
 
